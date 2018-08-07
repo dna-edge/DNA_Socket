@@ -17,8 +17,29 @@ global.env = require('./env');
 global.utils = require('./utils/global');
 require('./routes')(app);
 
+app.get('/', function(req, res){
+  res.sendFile(__dirname + '/test.html');
+});
+
 const PORT = 9014;
-app.listen(PORT, () => {
+const http = require('http').Server(app);
+const socket = require('./utils/socket').init(http);
+// io.on('connection', function(socket){
+//   console.log('a user connected');
+//   socket.broadcast.emit('hi');
+
+//   socket.on('disconnect', function(){
+//     console.log('user disconnected');
+//     socket.broadcast.emit('bye');
+//   });
+
+//   socket.on('chat message', function(msg){
+//     console.log('message: ' + msg);
+//     io.emit('chat message', msg);
+//   });
+// });
+
+http.listen(PORT, () => {
   console.info(`[DNA-SocketApiServer] Listening on Port ${PORT}`);
 });
 
