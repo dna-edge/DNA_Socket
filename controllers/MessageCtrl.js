@@ -1,7 +1,7 @@
 const validator = require('validator');
 
-const authModel = require('../models/AuthModel');
 const messageModel = require('../models/MessageModel');
+const helpers = require('../utils/helpers');
 
 let validationError = {
   name:'ValidationError',
@@ -13,16 +13,8 @@ let validationError = {
  *  TODO 저장 이후 처리 (socket emit, PUSH)
  ********************/
 exports.save = (token, param) => {
-  // 1. 먼저 해당 jwt가 유효한지 확인
-  return new Promise((resolve, reject) => {
-    authModel.auth(token, (err, userData) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(userData);
-      }
-    });
-  })
+  // 1. 먼저 해당 jwt가 유효한지 확인 
+  helpers.returnAuth(token)
   .then((userData) => {
     return new Promise(async (resolve, reject) => {
       /* PARAM */
@@ -33,7 +25,7 @@ exports.save = (token, param) => {
       const lat = param.lat || param.lat;
       const contents = param.contents || param.contents;
 
-      /* 1. 유효성 체크하기 */
+      /* 2. 유효성 체크하기 */
       let isValid = true;
 
       if (!lng || validator.isEmpty(lng)) {
@@ -54,7 +46,7 @@ exports.save = (token, param) => {
       if (!isValid) reject();
       /* 유효성 체크 끝 */
 
-      // 2. DB에 저장하기
+      // 3. DB에 저장하기
       const messageData = {
         id, nickname, avatar, lng, lat, contents
       };
@@ -66,7 +58,7 @@ exports.save = (token, param) => {
         return reject(error);
       }
 
-      // 3. 등록 성공! 소켓으로 다시 반대로 쏴줘야 한다.
+      // 4 등록 성공! 소켓으로 다시 반대로 쏴줘야 한다.
       return resolve(messageData);
     });
   });
@@ -117,10 +109,13 @@ exports.selectOne = async (req, res, next) => {
  *  
  ********************/
 exports.selectAll = async (req, res, next) => {
+  /* PARAM */
+  const page = parseInt(req.body.page) || parseInt(req.params.page);
+  
   // 1. DB에서 끌고 오기
   let result = '';
   try {
-    result = await messageModel.selectAll();
+    result = await messageModel.selectAll(page);
   } catch (error) {
     // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
     return next(error);
@@ -233,7 +228,7 @@ exports.testsave = async (req, res, next) => {
     return next(error);
   }
 
-  // 3. 등록 성공
+  // 3. 저장 성공
   const respond = {
     status: 201,
     message : "Create Message Successfully",

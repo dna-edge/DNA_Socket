@@ -60,6 +60,6 @@ function createSchema(config){
   }
 };
 
-module.exports.db = connection;
+module.exports.mysql = connection;
 module.exports.redis = redis;
 module.exports.mongo = mongo;

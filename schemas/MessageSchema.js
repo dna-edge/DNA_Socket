@@ -1,22 +1,25 @@
 const mongoose = require('mongoose');
 
+const paginationCount = require('../utils/config').pagenation_count;
+
 let Schema = {};
 
 Schema.createSchema = (mongoose) => {
   const messageSchema = mongoose.Schema({
-    idx: { type: Number, required: true, index: { unique: true} },
+    idx: { type: Number, required: true, index: { unique: true } },
     user: {
       id: { type: String, required: true },
       nickname: { type: String, required: true },
-      avatar: String,
+      avatar: String
     },
     location: {
       type: { type: String, default: "Point"},
       coordinates: [{ type: Number }]
     },
-    contents: { type: String, required: true},
+    contents: { type: String, required: true },
+    type: { type: String, default: "Message" },
     likes: { type: Number, default: 0, index: true },
-    created_at : { type : String, index: { unique : false } }
+    created_at : { type : Date, index: { unique : false }, default: Date.now }
   });
 
   messageSchema.index({ location: '2dsphere'});
@@ -31,8 +34,8 @@ Schema.createSchema = (mongoose) => {
   });
 
   // selectAll : 전체 조회하기
-  messageSchema.static('selectAll', function(callback) {
-    return this.find({}, callback);
+  messageSchema.static('selectAll', function(page, callback) {
+    return this.find({}, callback).sort('-created_at').skip(page).limit(paginationCount);
   });
 
   // selectCircle : 특정 반경 내의 값 조회하기

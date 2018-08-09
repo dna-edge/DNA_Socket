@@ -28,10 +28,7 @@
       $(function () {
         var socket = io();
         $('form').submit(function(){
-          const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."+
-            "eyJpZCI6IjM0NTdzb3NvIiwibmlja25hbWUiOiJzb3lvdW5nc"+
-            "GFyayIsImF2YXRhciI6bnVsbCwiaWF0IjoxNTMzNjY3NTMwLC"+
-            "JleHAiOjE1MzM3MTA3MzB9.J4tbKFFcitkJE62DHu-Zrb8N4MZJxj6GZniAW-ujSPM";
+          const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjM0NTdzb3NvIiwibmlja25hbWUiOiJzb3lvdW5ncGFyayIsImF2YXRhciI6bnVsbCwiaWF0IjoxNTMzNzk1NDI0LCJleHAiOjE1MzM4Mzg2MjR9.x0AZ45LVLABdkxn18xNEdVeGvtWDMmxWwmJOG6Tlu3g";
           const messageData = {
             lng: $("#lng").val(),
             lat: $("#lat").val(),

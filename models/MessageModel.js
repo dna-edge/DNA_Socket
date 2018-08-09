@@ -1,9 +1,8 @@
 const mongo = global.utils.mongo;
-const redis = global.utils.redis;
 
-const moment = require('moment');
-require('moment-timezone');
-moment.tz.setDefault("Asia/Seoul");
+// const moment = require('moment');
+// require('moment-timezone');
+// moment.tz.setDefault("Asia/Seoul");
 
 /*******************
  *  Save
@@ -14,7 +13,7 @@ exports.save = (messageData) => {
   return new Promise((resolve, reject) => {  
     mongo.messageModel.count((err, result) => {
       if (err) {
-        const customErr = new Error("Error occrred while selecting All Messages: " + err);
+        const customErr = new Error("Error occrred while Counting Messages: " + err);
         reject(customErr);        
       } else {
         resolve(result);
@@ -24,7 +23,13 @@ exports.save = (messageData) => {
   .then((count) => {
     // 2. model 생성하기
     return new Promise((resolve, reject) => {  
-      const now = moment().format("YYYY-MM-DD HH:mm:ss");
+      // const now = moment().format("YYYY-MM-DD HH:mm:ss");
+      let idx = 0;
+      
+      if (count[0]) {
+        idx = count[0].idx + 1;
+      }
+
       const message = new mongo.messageModel(
         {
           idx: count[0].idx + 1,
@@ -37,8 +42,7 @@ exports.save = (messageData) => {
             type: "Point",
             coordinates: [messageData.lng, messageData.lat]
           },
-          contents: messageData.contents,
-          created_at: now
+          contents: messageData.contents
         }
       );
 
@@ -77,12 +81,12 @@ exports.selectOne = (idx) => {
 
 /*******************
  *  SelectAll
- *  @param: conditions = {lng, lat, radius}
+ *  @param: page
  ********************/
-exports.selectAll = (conditions) => {
-  return new Promise((resolve, reject) => {      
+exports.selectAll = (page) => {
+  return new Promise((resolve, reject) => { 
     // DB의 모델에서 바로 끌고 오면 된다.
-    mongo.messageModel.selectAll((err, result) => {
+    mongo.messageModel.selectAll(page, (err, result) => {
         if (err) {
           const customErr = new Error("Error occrred while selecting All Messages: " + err);
           reject(customErr);        

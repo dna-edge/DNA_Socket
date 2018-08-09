@@ -1,3 +1,5 @@
+const authModel = require('../models/AuthModel');
+
 exports.getClientId = (customId) => {
   let result = -1;
 
@@ -9,4 +11,16 @@ exports.getClientId = (customId) => {
   }
 
   return result;
+}
+
+exports.returnAuth = (token) => {
+  return new Promise((resolve, reject) => {
+    authModel.auth(token, (err, userData) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(userData);
+      }
+    });
+  });
 }
