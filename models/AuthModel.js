@@ -21,6 +21,7 @@ exports.auth = (token, done) => {
       }
     } else {
       const userData = {
+        idx: decoded.idx,
         id: decoded.id,
         nickname: decoded.nickname,
         avatar: decoded.avatar

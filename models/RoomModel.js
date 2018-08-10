@@ -3,14 +3,14 @@ const mongo = global.utils.mongo;
 /*******************
  *  Open
  *  @param: roomData = {
- *            user1 = { id, nickname, avatar },
- *            user2 = { id, nickname, avatar }
+ *            user1 = { idx, id, nickname, avatar },
+ *            user2 = { idx, id, nickname, avatar }
  *          }
  ********************/
 exports.open = (roomData) => {  
   // 1. 해당 유저들의 채팅방이 존재하는지 확인
   return new Promise((resolve, reject) => {
-    mongo.roomModel.search(roomData.user1.id, roomData.user2.id, (err, result) => {
+    mongo.roomModel.search(roomData.user1.idx, roomData.user2.idx, (err, result) => {
       if (err) {
         const customErr = new Error("Error occrred while finding Room: " + err);
         reject(customErr);        
@@ -40,7 +40,7 @@ exports.open = (roomData) => {
       // 3. model 생성하기
       return new Promise((resolve, reject) => {  
         // const now = moment().format("YYYY-MM-DD HH:mm:ss");
-        let idx = 1;
+        let idx = 0;
         
         if (count[0]) {
           idx = count[0].idx + 1;
@@ -50,17 +50,17 @@ exports.open = (roomData) => {
           {
             idx,
             user1: {
+              idx: roomData.user1.idx,
               id: roomData.user1.id,
               nickname: roomData.user1.nickname,
               avatar: roomData.user1.avatar
             },
             user2: {
+              idx: roomData.user2.idx,
               id: roomData.user2.id,
               nickname: roomData.user2.nickname,
               avatar: roomData.user2.avatar
-            },
-            blind: [],
-            contents: []
+            }
           }
         );
 
@@ -81,12 +81,12 @@ exports.open = (roomData) => {
 
 /*******************
  *  SelectAll
- *  @param: userId, page
+ *  @param: userIdx, page
  ********************/
-exports.selectAll = (userId, page) => {
+exports.selectAll = (userIdx, page) => {
   return new Promise((resolve, reject) => { 
     // DB의 모델에서 바로 끌고 오면 된다.
-    mongo.roomModel.selectAll(userId, page, (err, result) => {
+    mongo.roomModel.selectAll(userIdx, page, (err, result) => {
         if (err) {
           const customErr = new Error("Error occrred while selecting All Rooms: " + err);
           reject(customErr);        
@@ -99,18 +99,42 @@ exports.selectAll = (userId, page) => {
 
 
 /*******************
- *  Delete
- *  @param: userId, roomIdx
+ *  Close
+ *  @param: userIdx, roomIdx
  ********************/
-exports.delete = (userId, roomIdx) => {
+exports.close = (userIdx, roomIdx) => {
   return new Promise((resolve, reject) => { 
     // DB의 모델에서 바로 끌고 오면 된다.
-    mongo.roomModel.delete(userId, roomIdx, (err, result) => {
+    mongo.roomModel.close(userIdx, roomIdx, (err, result) => {
         if (err) {
           const customErr = new Error("Error occrred while Removing Room's DMs: " + err);
           reject(customErr);        
         } else {
           resolve(result);
+        }
+    });
+  });
+};
+
+
+
+/*******************
+ *  CheckUser
+ *  @param: userIdx, roomIdx
+ ********************/
+exports.checkUser = (userIdx, roomIdx) => {
+  return new Promise((resolve, reject) => { 
+    // DB의 모델에서 바로 끌고 오면 된다.
+    mongo.roomModel.selectOne(roomIdx, (err, room) => {
+        if (err) {
+          const customErr = new Error("Error occrred while Checking User is in Room : " + err);
+          reject(customErr);        
+        } else {
+          if (room[0] && (room[0].user1.idx === userIdx || room[0].user2.idx === userIdx)) { // 존재 확인!
+            resolve(true);
+          } else {
+            resolve(false)
+          }          
         }
     });
   });

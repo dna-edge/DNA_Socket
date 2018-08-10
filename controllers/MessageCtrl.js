@@ -8,8 +8,10 @@ let validationError = {
   errors:{}
 };
 
+
 /*******************
  *  Save
+ *  param: lng, lat, type, contents
  *  TODO 저장 이후 처리 (socket emit, PUSH)
  ********************/
 exports.save = (token, param) => {
@@ -18,6 +20,7 @@ exports.save = (token, param) => {
   .then((userData) => {
     return new Promise(async (resolve, reject) => {
       /* PARAM */
+      const idx = userData.idx;
       const id = userData.id;
       const nickname = userData.nickname;
       const avatar = userData.avatar;
@@ -48,7 +51,7 @@ exports.save = (token, param) => {
 
       // 3. DB에 저장하기
       const messageData = {
-        id, nickname, avatar, lng, lat, contents
+        idx, id, nickname, avatar, lng, lat, contents
       };
 
       try {
@@ -65,9 +68,10 @@ exports.save = (token, param) => {
 };
 
 
+
 /*******************
  *  selectOne
- *  
+ *  param : idx
  ********************/
 exports.selectOne = async (req, res, next) => {
   /* PARAM */
@@ -96,7 +100,7 @@ exports.selectOne = async (req, res, next) => {
   // 3. 조회 성공
   const respond = {
     status: 200,
-    message : "Selecct Messages Successfully",
+    message : "Select Messages Successfully",
     data: result
   };
   return res.status(200).json(respond);
@@ -106,11 +110,11 @@ exports.selectOne = async (req, res, next) => {
 
 /*******************
  *  selectAll
- *  @param page
+ *  @param: page
  ********************/
 exports.selectAll = async (req, res, next) => {
   /* PARAM */
-  const page = parseInt(req.body.page) || parseInt(req.params.page);
+  const page = req.body.page || req.params.page;
   
   // 1. DB에서 끌고 오기
   let result = '';
@@ -124,7 +128,7 @@ exports.selectAll = async (req, res, next) => {
   // 2. 조회 성공
   const respond = {
     status: 200,
-    message : "Selecct Messages Successfully",
+    message : "Select Messages Successfully",
     data: result
   };
   return res.status(200).json(respond);
@@ -132,15 +136,15 @@ exports.selectAll = async (req, res, next) => {
 
 
 /*******************
- *  SelectCircle
- *  @param page
+ *  selectCircle
+ *  @param: lng, lat, radius, page
  ********************/
 exports.selectCircle = async (req, res, next) => {
   /* PARAM */
-  const lng = req.body.lng || req.query.lng;
-  const lat = req.body.lat || req.query.lat;
-  const radius = req.body.radius || req.query.radius;
-  const page = parseInt(req.body.page) || parseInt(req.params.page);  
+  const lng = req.body.lng || req.params.lng;
+  const lat = req.body.lat || req.params.lat;
+  const radius = req.body.radius || req.params.radius;
+  const page = req.body.page || req.params.page;  
   
   /* 1. 유효성 체크하기 */
   let isValid = true;
@@ -179,7 +183,7 @@ exports.selectCircle = async (req, res, next) => {
   // 3. 조회 성공
   const respond = {
     status: 200,
-    message : "Selecct Messages Successfully",
+    message : "Select Messages Successfully",
     data: result
   };
   return res.status(200).json(respond);
@@ -188,12 +192,14 @@ exports.selectCircle = async (req, res, next) => {
 
 exports.testsave = async (req, res, next) => {
   /* PARAM */
+  const idx = req.userData.idx;
   const id = req.userData.id;
   const nickname = req.userData.nickname;
   const avatar = req.userData.avatar;
-  const lng = req.body.lng || req.query.lng;
-  const lat = req.body.lat || req.query.lat;
-  const contents = req.body.contents || req.query.contents;
+  const lng = req.body.lng || req.params.lng;
+  const lat = req.body.lat || req.params.lat;
+  const type = req.body.type || req.params.type;
+  const contents = req.body.contents || req.params.contents;
   
   /* 1. 유효성 체크하기 */
   let isValid = true;
@@ -220,7 +226,7 @@ exports.testsave = async (req, res, next) => {
   let result = '';
   try {
     const messageData = {
-      id, nickname, avatar, lng, lat, contents
+      idx, id, nickname, avatar, lng, lat, type, contents
     };
 
     result = await messageModel.save(messageData);
@@ -235,5 +241,51 @@ exports.testsave = async (req, res, next) => {
     message : "Create Message Successfully",
     data: result
   };
+  return res.status(201).json(respond);
+}
+
+
+
+/*******************
+ *  like
+ *  @param: messageIdx
+ ********************/
+exports.like = async (req, res, next) => {
+  const userIdx = req.userData.idx;
+  const messageIdx = req.body.idx || req.params.idx;
+
+   /* 1. 유효성 체크하기 */
+   let isValid = true;
+
+   if (!messageIdx || validator.isEmpty(messageIdx)) {
+     isValid = false;
+     validationError.errors.messageIdx = { message : "Message idx is required" };
+   }
+ 
+   if (!isValid) return res.status(400).json(validationError);
+   /* 유효성 체크 끝 */
+
+  // 2. DB에 저장하기
+  let result = '';
+  try {
+    result = await messageModel.like(userIdx, messageIdx);
+  } catch (error) {
+    // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
+    return next(error);
+  }
+
+  let message = '';
+
+  if (result) {
+    message = "Like pushed Successfully";
+  } else {
+    message = "Like popped Successfully"
+  }
+  // 3. 저장 성공
+  const respond = {
+    status: 201,
+    message
+  };
+
   return res.status(201).json(respond);
 }

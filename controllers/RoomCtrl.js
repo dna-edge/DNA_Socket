@@ -10,28 +10,34 @@ let validationError = {
 
 /*******************
  *  Open
- *  @param user1, user2
+ *  @param: user2 = { idx, id, nickname, avatar }
  ********************/
 exports.open = async (req, res, next) => {
   /* PARAM */
   const user1 = req.userData;
   const user2 = {
-    id: req.body.id || req.query.id,
-    nickname: req.body.nickname || req.query.nickname,
-    avatar: req.body.avatar || req.query.avatar
+    idx: req.body.idx || req.params.idx,
+    id: req.body.id || req.params.id,
+    nickname: req.body.nickname || req.params.nickname,
+    avatar: req.body.avatar || req.params.avatar || null
   };
 
   /* 1. 유효성 체크하기 */
   let isValid = true;
 
+  if (!user2.idx || validator.isEmpty(user2.idx)) {
+    isValid = false;
+    validationError.errors.idx = { message : "User Idx is required" };
+  }
+
   if (!user2.id || validator.isEmpty(user2.id)) {
     isValid = false;
-    validationError.errors.id = { message : "Id is required" };
+    validationError.errors.id = { message : "User Id is required" };
   }
 
   if (!user2.nickname || validator.isEmpty(user2.nickname)) {
     isValid = false;
-    validationError.errors.nickname = { message : "Nickname is required" };
+    validationError.errors.nickname = { message : "User Nickname is required" };
   }
 
   if (!isValid) return res.status(400).json(validationError);
@@ -61,17 +67,17 @@ exports.open = async (req, res, next) => {
 
 /*******************
  *  selectAll
- *  
+ *  @param: page
  ********************/
-exports.selectAll = async (req, res, next) => {
+exports.selectAll = async (req, res, next) => {  
   /* PARAM */
-  const page = parseInt(req.body.page) || parseInt(req.params.page);
-  const userId = req.userData.id;
+  const userIdx = req.userData.idx;
+  const page = req.body.page || req.params.page;
 
   // 1. DB에서 끌고 오기
   let result = '';
   try {
-    result = await roomModel.selectAll(userId, page);
+    result = await roomModel.selectAll(userIdx, page);
   } catch (error) {
     // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
     return next(error);
@@ -80,54 +86,27 @@ exports.selectAll = async (req, res, next) => {
   // 2. 조회 성공
   const respond = {
     status: 200,
-    message : "Selecct Rooms Successfully",
+    message : "Select Rooms Successfully",
     data: result
   };
   return res.status(200).json(respond);
-}
+};
 
-
-/*******************
- *  selectAll
- *  @param page
- ********************/
-exports.selectAll = async (req, res, next) => {
-  /* PARAM */
-  const page = parseInt(req.body.page) || parseInt(req.params.page);
-  const userId = req.userData.id;
-
-  // 1. DB에서 끌고 오기
-  let result = '';
-  try {
-    result = await roomModel.selectAll(userId, page);
-  } catch (error) {
-    // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
-    return next(error);
-  }
-
-  // 2. 조회 성공
-  const respond = {
-    status: 200,
-    message : "Selecct Rooms Successfully",
-    data: result
-  };
-  return res.status(200).json(respond);
-}
 
 
 /*******************
- *  delete
+ *  close
  *  @param: roomIdx
  ********************/
-exports.delete = async (req, res, next) => {
+exports.close = async (req, res, next) => {
   /* PARAM */
-  const userId = req.userData.id;
-  const roomIdx = parseInt(req.body.room_idx) || parseInt(req.query.room_idx);
+  const userIdx = req.userData.idx;
+  const roomIdx = req.body.idx || req.params.idx;
   
   /* 1. 유효성 체크하기 */
   let isValid = true;
 
-  if (!roomIdx) {
+  if (!roomIdx || validator.isEmpty(roomIdx)) {
     isValid = false;
     validationError.errors.roomIdx = { message : "Room Index is required" };
   }
@@ -137,7 +116,7 @@ exports.delete = async (req, res, next) => {
 
   // 2. DB에서 처리하기
   try {
-    await roomModel.delete(userId, roomIdx);
+    await roomModel.close(userIdx, roomIdx);
   } catch (error) {
     // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
     return next(error);
@@ -146,7 +125,7 @@ exports.delete = async (req, res, next) => {
   // 3. 삭제 성공
   const respond = {
     status: 201,
-    message : "Remove Direct Messages Successfully"
+    message : "Close Room Successfully"
   };
   return res.status(201).json(respond);
 };
