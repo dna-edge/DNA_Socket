@@ -19,5 +19,5 @@ module.exports = {
       modelName: 'roomModel'
     }
   ],
-  pagenation_count: 10
+  pagination_count: 3
 }
