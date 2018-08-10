@@ -24,7 +24,7 @@ exports.save = (messageData) => {
     // 2. model 생성하기
     return new Promise((resolve, reject) => {  
       // const now = moment().format("YYYY-MM-DD HH:mm:ss");
-      let idx = 0;
+      let idx = 1;
       
       if (count[0]) {
         idx = count[0].idx + 1;
@@ -32,7 +32,7 @@ exports.save = (messageData) => {
 
       const message = new mongo.messageModel(
         {
-          idx: count[0].idx + 1,
+          idx,
           user: {
             id: messageData.id,
             nickname: messageData.nickname,
@@ -100,13 +100,12 @@ exports.selectAll = (page) => {
 
 /*******************
  *  SelectCircle
- *  @param: conditions = {lng, lat, radius}
+ *  @param: conditions = {lng, lat, radius}, page
  ********************/
-exports.selectCircle = (conditions) => {
+exports.selectCircle = (conditions, page) => {
   return new Promise((resolve, reject) => {      
     // DB의 모델에서 바로 끌고 오면 된다.
-    mongo.messageModel.selectCircle(
-      conditions, (err, result) => {
+    mongo.messageModel.selectCircle(conditions, page, (err, result) => {
         if (err) {
           const customErr = new Error("Error occrred while selecting Messages: " + err);
           reject(customErr);        

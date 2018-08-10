@@ -106,7 +106,7 @@ exports.selectOne = async (req, res, next) => {
 
 /*******************
  *  selectAll
- *  
+ *  @param page
  ********************/
 exports.selectAll = async (req, res, next) => {
   /* PARAM */
@@ -133,14 +133,15 @@ exports.selectAll = async (req, res, next) => {
 
 /*******************
  *  SelectCircle
- *  
+ *  @param page
  ********************/
 exports.selectCircle = async (req, res, next) => {
   /* PARAM */
   const lng = req.body.lng || req.query.lng;
   const lat = req.body.lat || req.query.lat;
   const radius = req.body.radius || req.query.radius;
-
+  const page = parseInt(req.body.page) || parseInt(req.params.page);  
+  
   /* 1. 유효성 체크하기 */
   let isValid = true;
 
@@ -169,7 +170,7 @@ exports.selectCircle = async (req, res, next) => {
       lng, lat, radius
     };
 
-    result = await messageModel.selectCircle(conditions);
+    result = await messageModel.selectCircle(conditions, page);
   } catch (error) {
     // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
     return next(error);

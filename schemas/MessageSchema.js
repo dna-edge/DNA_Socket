@@ -10,8 +10,7 @@ Schema.createSchema = (mongoose) => {
     user: {
       id: { type: String, required: true },
       nickname: { type: String, required: true },
-      avatar: String
-    },
+      avatar: String},
     location: {
       type: { type: String, default: "Point"},
       coordinates: [{ type: Number }]
@@ -39,15 +38,15 @@ Schema.createSchema = (mongoose) => {
   });
 
   // selectCircle : 특정 반경 내의 값 조회하기
-  messageSchema.static('selectCircle', function(conditions, callback) {
+  messageSchema.static('selectCircle', function(conditions, page, callback) {
     /* where 안에 들어가는 이름은 해당 컬럼의 이름임에 주의한다! */
-    this.find().where('location').within(
+    this.find({}, callback).where('location').within(
       {
         center : [parseFloat(conditions.lng), parseFloat(conditions.lat)],
         radius : parseFloat(conditions.radius/6371000), // change radian: 1/6371 -> 1km
         unique : true, spherical : true
       }
-    ).exec(callback);
+    ).skip(page).limit(paginationCount);
   });
 
   return messageSchema;

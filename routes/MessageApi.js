@@ -14,6 +14,9 @@ module.exports = (router) => {
   router.route('/message')
     .post(authCtrl.auth, messageCtrl.selectCircle);
 
+  router.route('/message/:page')
+    .post(authCtrl.auth, messageCtrl.selectCircle);
+
   /* 모든 메시지 리스트 조회 */
   router.route('/messages')
     .get(authCtrl.auth, messageCtrl.selectAll);
