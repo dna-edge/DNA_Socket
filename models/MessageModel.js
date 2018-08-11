@@ -6,7 +6,7 @@ const mongo = global.utils.mongo;
 
 /*******************
  *  Save
- *  @param: messageData = {idx, id, nickname, avatar, lat, lon, contents}
+ *  @param: messageData = {idx, nickname, avatar, lat, lon, contents}
  ********************/
 exports.save = (messageData) => {
   // 1. idx 최대값 구하기 
@@ -35,7 +35,6 @@ exports.save = (messageData) => {
           idx,
           user: {
             idx: messageData.idx,
-            id: messageData.id,
             nickname: messageData.nickname,
             avatar: messageData.avatar
           },

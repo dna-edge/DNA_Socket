@@ -21,7 +21,6 @@ exports.save = (token, param) => {
     return new Promise(async (resolve, reject) => {
       /* PARAM */
       const idx = userData.idx;
-      const id = userData.id;
       const nickname = userData.nickname;
       const avatar = userData.avatar;
       const lng = param.lng || param.lng;
@@ -51,7 +50,7 @@ exports.save = (token, param) => {
 
       // 3. DB에 저장하기
       const messageData = {
-        idx, id, nickname, avatar, lng, lat, contents
+        idx, nickname, avatar, lng, lat, contents
       };
 
       try {

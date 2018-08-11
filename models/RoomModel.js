@@ -3,8 +3,8 @@ const mongo = global.utils.mongo;
 /*******************
  *  Open
  *  @param: roomData = {
- *            user1 = { idx, id, nickname, avatar },
- *            user2 = { idx, id, nickname, avatar }
+ *            user1 = { idx, nickname, avatar },
+ *            user2 = { idx, nickname, avatar }
  *          }
  ********************/
 exports.open = (roomData) => {  
@@ -49,18 +49,15 @@ exports.open = (roomData) => {
         const room = new mongo.roomModel(
           {
             idx,
-            user1: {
+            users: [{
               idx: roomData.user1.idx,
-              id: roomData.user1.id,
               nickname: roomData.user1.nickname,
               avatar: roomData.user1.avatar
-            },
-            user2: {
-              idx: roomData.user2.idx,
-              id: roomData.user2.id,
+            },{
+              idx: roomData.user2.idx,              
               nickname: roomData.user2.nickname,
               avatar: roomData.user2.avatar
-            }
+            }]
           }
         );
 

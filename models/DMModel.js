@@ -27,7 +27,7 @@ exports.save = (dmData) => {
     return new Promise((resolve, reject) => {
       const dm = new mongo.dmModel(
         {
-          idx: dmData.idx,
+          sender_idx: dmData.idx,
           contents: dmData.contents
         }
       );

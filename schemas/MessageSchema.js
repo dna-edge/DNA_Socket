@@ -9,7 +9,6 @@ Schema.createSchema = (mongoose) => {
     idx: { type: Number, required: true, index: { unique: true } },
     user: {
       idx: { type: Number, required: true},
-      id: { type: String, required: true },
       nickname: { type: String, required: true },
       avatar: String},
     location: {
