@@ -1,5 +1,6 @@
 const mongo = global.utils.mongo;
 const paginationCount = require('../utils/config').pagination_count;
+const helpers = require('../utils/helpers');
 
 /*******************
  *  Save
@@ -28,7 +29,8 @@ exports.save = (dmData) => {
       const dm = new mongo.dmModel(
         {
           sender_idx: dmData.idx,
-          contents: dmData.contents
+          contents: dmData.contents,
+          created_at: helpers.getCurrentDate()
         }
       );
       // 3. 해당 room에 dm 추가하기 (저장하기)

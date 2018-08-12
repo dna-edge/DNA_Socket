@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const paginationCount = require('../utils/config').pagination_count;
+const helpers = require('../utils/helpers');
 const dmSchema = global.utils.mongo.dmSchema.obj;
 
 let Schema = {};
@@ -100,7 +101,7 @@ Schema.createSchema = (mongoose) => {
   roomSchema.static('updated', function(roomIdx, callback) {
     this.findOneAndUpdate(
       { idx: parseInt(roomIdx) },
-      { updated_at: Date.now() },
+      { updated_at: helpers.getCurrentDate() },
       callback
     );
   });

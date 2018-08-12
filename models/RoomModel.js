@@ -1,4 +1,5 @@
 const mongo = global.utils.mongo;
+const helpers = require('../utils/helpers');
 
 /*******************
  *  Open
@@ -57,7 +58,9 @@ exports.open = (roomData) => {
               idx: roomData.user2.idx,              
               nickname: roomData.user2.nickname,
               avatar: roomData.user2.avatar
-            }]
+            }],
+            created_at: helpers.getCurrentDate(),
+            updated_at: helpers.getCurrentDate()
           }
         );
 

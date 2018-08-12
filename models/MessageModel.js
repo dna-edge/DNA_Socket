@@ -1,8 +1,5 @@
 const mongo = global.utils.mongo;
-
-// const moment = require('moment');
-// require('moment-timezone');
-// moment.tz.setDefault("Asia/Seoul");
+const helpers = require('../utils/helpers');
 
 /*******************
  *  Save
@@ -23,13 +20,12 @@ exports.save = (messageData) => {
   .then((count) => {
     // 2. model 생성하기
     return new Promise((resolve, reject) => {  
-      // const now = moment().format("YYYY-MM-DD HH:mm:ss");
       let idx = 1;
       
       if (count[0]) {
         idx = count[0].idx + 1;
       }
-
+      
       const message = new mongo.messageModel(
         {
           idx,
@@ -42,7 +38,8 @@ exports.save = (messageData) => {
             type: "Point",
             coordinates: [messageData.lng, messageData.lat]
           },
-          contents: messageData.contents
+          contents: messageData.contents,
+          created_at: helpers.getCurrentDate()
         }
       );
 
@@ -52,7 +49,19 @@ exports.save = (messageData) => {
           // console.log(err);
           reject(err);
         } else {
-          resolve(null);
+          resolve(idx);
+        }
+      });
+    });
+  })
+  .then((idx) => {
+    return new Promise((resolve, reject) => {      
+      mongo.messageModel.selectOne(idx, (err, result) => {
+        if (err) {
+          const customErr = new Error("Error occrred while selecting All Messages: " + err);
+          reject(customErr);        
+        } else {
+          resolve(result);
         }
       });
     });
