@@ -21,8 +21,7 @@ module.exports = (router) => {
   /* 좋아요 추가 or 해제 */
   router.route('/like/message/:idx')
     .get(authCtrl.auth, messageCtrl.like);
-
-  /* 좋아요 해제 */
+    
     
   /* 메시지 생성 테스트용 */
   router.route('/test/message')

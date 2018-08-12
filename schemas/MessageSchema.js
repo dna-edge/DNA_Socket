@@ -8,7 +8,7 @@ Schema.createSchema = (mongoose) => {
   const messageSchema = mongoose.Schema({
     idx: { type: Number, required: true, index: { unique: true } },
     user: {
-      idx: { type: Number, required: true},
+      idx: { type: Number, required: true },
       nickname: { type: String, required: true },
       avatar: String},
     location: {
@@ -41,22 +41,22 @@ Schema.createSchema = (mongoose) => {
   });
 
   // selectAll : 전체 조회하기
-  messageSchema.static('selectAll', function(page, callback) {
+  messageSchema.static('selectAll', function(blocks, page, callback) {
     if (!page) { // 페이지 인자가 없음 : 페이지네이션이 되지 않은 경우
-      return this.find({}, callback)
+      return this.find({ 'user.idx': { $nin: blocks }}, callback)
         .sort('-created_at');
     } else {     // 페이지 인자가 있음 : 페이지네이션 적용
-      return this.find({}, callback)
+      return this.find({ 'user.idx': { $nin: blocks }}, callback)
         .sort('-created_at')
         .skip(parseInt(page) * paginationCount).limit(paginationCount);
     }
   });
 
   // selectCircle : 특정 반경 내의 값 조회하기
-  messageSchema.static('selectCircle', function(conditions, page, callback) {
+  messageSchema.static('selectCircle', function(conditions, blocks, page, callback) {
     /* where 안에 들어가는 이름은 해당 컬럼의 이름임에 주의한다! */
     if (!page) { // 페이지 인자가 없음 : 페이지네이션이 되지 않은 경우
-        return this.find({}, callback)
+      return this.find({ 'user.idx': { $nin: blocks }}, callback)
         .where('location')
         .within(
           {
@@ -64,9 +64,9 @@ Schema.createSchema = (mongoose) => {
             radius : parseFloat(conditions.radius/6371000), // change radian: 1/6371 -> 1km
             unique : true, spherical : true
           }
-        );
+        ).sort('-created_at');
     } else {     // 페이지 인자가 있음 : 페이지네이션 적용
-      this.find({}, callback)
+      return this.find({ 'user.idx': { $nin: blocks }}, callback)
         .where('location')
         .within(
           {
@@ -75,6 +75,7 @@ Schema.createSchema = (mongoose) => {
             unique : true, spherical : true
           }
         )
+        .sort('-created_at')
         .skip(page * paginationCount).limit(paginationCount);
     }
   });

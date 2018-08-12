@@ -81,12 +81,12 @@ exports.selectOne = (idx) => {
 
 /*******************
  *  SelectAll
- *  @param: page
+ *  @param: blocks, page
  ********************/
-exports.selectAll = (page) => {
+exports.selectAll = (blocks, page) => {
   return new Promise((resolve, reject) => { 
     // DB의 모델에서 바로 끌고 오면 된다.
-    mongo.messageModel.selectAll(page, (err, result) => {
+    mongo.messageModel.selectAll(blocks, page, (err, result) => {
         if (err) {
           const customErr = new Error("Error occrred while selecting All Messages: " + err);
           reject(customErr);        
@@ -100,12 +100,12 @@ exports.selectAll = (page) => {
 
 /*******************
  *  SelectCircle
- *  @param: conditions = {lng, lat, radius}, page
+ *  @param: conditions = {lng, lat, radius}, blocks, page
  ********************/
-exports.selectCircle = (conditions, page) => {
+exports.selectCircle = (conditions, blocks, page) => {
   return new Promise((resolve, reject) => {      
     // DB의 모델에서 바로 끌고 오면 된다.
-    mongo.messageModel.selectCircle(conditions, page, (err, result) => {
+    mongo.messageModel.selectCircle(conditions, blocks, page, (err, result) => {
         if (err) {
           const customErr = new Error("Error occrred while selecting Messages: " + err);
           reject(customErr);        

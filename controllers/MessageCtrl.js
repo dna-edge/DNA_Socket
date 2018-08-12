@@ -1,6 +1,7 @@
 const validator = require('validator');
 
 const messageModel = require('../models/MessageModel');
+const userModel = require('../models/UserModel');
 const helpers = require('../utils/helpers');
 
 let validationError = {
@@ -113,15 +114,25 @@ exports.selectOne = async (req, res, next) => {
  ********************/
 exports.selectAll = async (req, res, next) => {
   /* PARAM */
+  const idx = req.userData.idx;
   const page = req.body.page || req.params.page;
   
-  // 1. DB에서 끌고 오기
+  // 1. 차단 리스트 끌고 오기
+  let blocks = '';
+  try {
+    blocks = await userModel.selectBlock(idx);
+  } catch (err) {
+    // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
+    return next(err);
+  }
+
+  // 2. DB에서 끌고 오기
   let result = '';
   try {
-    result = await messageModel.selectAll(page);
-  } catch (error) {
+    result = await messageModel.selectAll(blocks, page);
+  } catch (err) {
     // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
-    return next(error);
+    return next(err);
   }
 
   // 2. 조회 성공
@@ -140,6 +151,7 @@ exports.selectAll = async (req, res, next) => {
  ********************/
 exports.selectCircle = async (req, res, next) => {
   /* PARAM */
+  const idx = req.userData.idx;
   const lng = req.body.lng || req.params.lng;
   const lat = req.body.lat || req.params.lat;
   const radius = req.body.radius || req.params.radius;
@@ -166,20 +178,29 @@ exports.selectCircle = async (req, res, next) => {
   if (!isValid) return res.status(400).json(validationError);
   /* 유효성 체크 끝 */
 
-  // 2. DB에서 끌고 오기
+  // 2. 차단 리스트 끌고 오기
+  let blocks = '';
+  try {
+    blocks = await userModel.selectBlock(idx);
+  } catch (err) {
+    // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
+    return next(err);
+  }
+
+  // 3. DB에서 끌고 오기
   let result = '';
   try {
     const conditions = {
       lng, lat, radius
     };
 
-    result = await messageModel.selectCircle(conditions, page);
+    result = await messageModel.selectCircle(conditions, blocks, page);
   } catch (error) {
     // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
     return next(error);
   }
 
-  // 3. 조회 성공
+  // 4. 조회 성공
   const respond = {
     status: 200,
     message : "Select Messages Successfully",
