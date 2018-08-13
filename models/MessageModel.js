@@ -1,12 +1,9 @@
 const mongo = global.utils.mongo;
-
-// const moment = require('moment');
-// require('moment-timezone');
-// moment.tz.setDefault("Asia/Seoul");
+const helpers = require('../utils/helpers');
 
 /*******************
  *  Save
- *  @param: messageData = {idx, id, nickname, avatar, lat, lon, contents}
+ *  @param: messageData = {idx, nickname, avatar, lat, lon, contents}
  ********************/
 exports.save = (messageData) => {
   // 1. idx 최대값 구하기 
@@ -23,19 +20,17 @@ exports.save = (messageData) => {
   .then((count) => {
     // 2. model 생성하기
     return new Promise((resolve, reject) => {  
-      // const now = moment().format("YYYY-MM-DD HH:mm:ss");
       let idx = 1;
       
       if (count[0]) {
         idx = count[0].idx + 1;
       }
-
+      
       const message = new mongo.messageModel(
         {
           idx,
           user: {
             idx: messageData.idx,
-            id: messageData.id,
             nickname: messageData.nickname,
             avatar: messageData.avatar
           },
@@ -43,17 +38,30 @@ exports.save = (messageData) => {
             type: "Point",
             coordinates: [messageData.lng, messageData.lat]
           },
-          contents: messageData.contents
+          type: messageData.type,
+          contents: messageData.contents,
+          created_at: helpers.getCurrentDate()
         }
       );
 
       // 3. save로 저장
       message.save((err) => {
         if (err) {
-          // console.log(err);
           reject(err);
         } else {
-          resolve(null);
+          resolve(idx);
+        }
+      });
+    });
+  })
+  .then((idx) => {
+    return new Promise((resolve, reject) => {    
+      mongo.messageModel.selectOne(idx, (err, result) => {
+        if (err) {
+          const customErr = new Error("Error occrred while selecting All Messages: " + err);
+          reject(customErr);        
+        } else {
+          resolve(result);
         }
       });
     });
@@ -82,12 +90,12 @@ exports.selectOne = (idx) => {
 
 /*******************
  *  SelectAll
- *  @param: page
+ *  @param: blocks, page
  ********************/
-exports.selectAll = (page) => {
+exports.selectAll = (blocks, page) => {
   return new Promise((resolve, reject) => { 
     // DB의 모델에서 바로 끌고 오면 된다.
-    mongo.messageModel.selectAll(page, (err, result) => {
+    mongo.messageModel.selectAll(blocks, page, (err, result) => {
         if (err) {
           const customErr = new Error("Error occrred while selecting All Messages: " + err);
           reject(customErr);        
@@ -101,12 +109,12 @@ exports.selectAll = (page) => {
 
 /*******************
  *  SelectCircle
- *  @param: conditions = {lng, lat, radius}, page
+ *  @param: conditions = {lng, lat, radius}, blocks, page
  ********************/
-exports.selectCircle = (conditions, page) => {
+exports.selectCircle = (conditions, blocks, page) => {
   return new Promise((resolve, reject) => {      
     // DB의 모델에서 바로 끌고 오면 된다.
-    mongo.messageModel.selectCircle(conditions, page, (err, result) => {
+    mongo.messageModel.selectCircle(conditions, blocks, page, (err, result) => {
         if (err) {
           const customErr = new Error("Error occrred while selecting Messages: " + err);
           reject(customErr);        

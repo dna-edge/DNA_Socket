@@ -17,7 +17,6 @@ exports.open = async (req, res, next) => {
   const user1 = req.userData;
   const user2 = {
     idx: req.body.idx || req.params.idx,
-    id: req.body.id || req.params.id,
     nickname: req.body.nickname || req.params.nickname,
     avatar: req.body.avatar || req.params.avatar || null
   };
@@ -28,11 +27,6 @@ exports.open = async (req, res, next) => {
   if (!user2.idx || validator.isEmpty(user2.idx)) {
     isValid = false;
     validationError.errors.idx = { message : "User Idx is required" };
-  }
-
-  if (!user2.id || validator.isEmpty(user2.id)) {
-    isValid = false;
-    validationError.errors.id = { message : "User Id is required" };
   }
 
   if (!user2.nickname || validator.isEmpty(user2.nickname)) {

@@ -1,3 +1,5 @@
+const redis = global.utils.redis;
+
 const jwt = require('jsonwebtoken');
 
 /*******************
@@ -11,11 +13,9 @@ exports.auth = (token, done) => {
 
       switch (err.message) {
         case 'jwt expired':
-          customErr = new Error("Token is expired");
-          return done(customErr);
+          return done(10400);
         case 'invalid token':
-          customErr = new Error("Token is invalid");
-          return done(customErr);
+          return done(10411);
         default:
           return done(err.message);
       }

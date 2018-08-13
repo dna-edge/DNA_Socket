@@ -1,6 +1,7 @@
 const validator = require('validator');
 
 const authModel = require('../models/AuthModel');
+const errorCode = require('../utils/error').code;
 
 let tokenError = {
   name:'tokenError',
@@ -17,16 +18,9 @@ exports.auth = (req, res, next) => {
   } else {
     authModel.auth(req.headers.token, (err, userData) => {
       if (err) {
-        return next(err);
+        return res.json(errorCode[err]);
       } else {
         req.userData = userData;
-        // return next();
-
-        const respond = {
-          status: 202,
-          message: "Authenticate Successfully", 
-          data: userData
-        };
         return next();
       }
     });

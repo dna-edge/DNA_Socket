@@ -17,27 +17,35 @@ global.env = require('./env');
 global.utils = require('./utils/global');
 require('./routes')(app);
 
-app.get('/', function(req, res){
-  res.sendFile(__dirname + '/test.html');
+app.get('/message', function(req, res){
+  res.sendFile(__dirname + '/test_message.html');
+});
+
+app.get('/dm', function(req, res){
+  res.sendFile(__dirname + '/test_dm.html');
 });
 
 const PORT = 9014;
 const http = require('http').Server(app);
 const socket = require('./utils/socket').init(http);
-// io.on('connection', function(socket){
-//   console.log('a user connected');
-//   socket.broadcast.emit('hi');
 
-//   socket.on('disconnect', function(){
-//     console.log('user disconnected');
-//     socket.broadcast.emit('bye');
-//   });
+process.stdin.resume(); //so the program will not close instantly
 
-//   socket.on('chat message', function(msg){
-//     console.log('message: ' + msg);
-//     io.emit('chat message', msg);
-//   });
-// });
+function exitHandler(options, exitCode) {
+    if (options.cleanup || exitCode || exitCode === 0) {
+      global.utils.redis.del("clients");
+    }
+    if (options.exit) {
+      global.utils.redis.del("clients");
+      process.exit();
+    }
+}
+
+process.on('exit', exitHandler.bind(null,{cleanup:true}));            // do something when app is closing
+process.on('SIGINT', exitHandler.bind(null, {exit:true}));            // catches ctrl+c event
+process.on('SIGUSR1', exitHandler.bind(null, {exit:true}));           // catches "kill pid"
+process.on('SIGUSR2', exitHandler.bind(null, {exit:true}));
+process.on('uncaughtException', exitHandler.bind(null, {exit:true})); // uncaught exceptions
 
 http.listen(PORT, () => {
   console.info(`[DNA-SocketApiServer] Listening on Port ${PORT}`);

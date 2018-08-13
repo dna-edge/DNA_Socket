@@ -1,6 +1,8 @@
 const validator = require('validator');
 
 const messageModel = require('../models/MessageModel');
+const userModel = require('../models/UserModel');
+const authModel = require('../models/AuthModel');
 const helpers = require('../utils/helpers');
 
 let validationError = {
@@ -12,28 +14,37 @@ let validationError = {
 /*******************
  *  Save
  *  param: lng, lat, type, contents
- *  TODO 저장 이후 처리 (socket emit, PUSH)
+ *  TODO 에러 코드 정리 및 PUSH
  ********************/
 exports.save = (token, param) => {
   // 1. 먼저 해당 jwt가 유효한지 확인 
-  helpers.returnAuth(token)
+  return new Promise((resolve, reject) => {
+    authModel.auth(token, (err, userData) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(userData);
+      }
+    });
+  })
   .then((userData) => {
     return new Promise(async (resolve, reject) => {
       /* PARAM */
       const idx = userData.idx;
       const id = userData.id;
       const nickname = userData.nickname;
-      const avatar = userData.avatar;
-      const lng = param.lng || param.lng;
-      const lat = param.lat || param.lat;
-      const contents = param.contents || param.contents;
-
+      const avatar = userData.avatar || null;
+      const lng = param.lng;
+      const lat = param.lat;
+      const contents = param.contents;
+      const type = param.type || "Message";
+      
       /* 2. 유효성 체크하기 */
       let isValid = true;
 
       if (!lng || validator.isEmpty(lng)) {
         isValid = false;
-        validationError.errors.lon = { message : "Longitude is required" };
+        validationError.errors.lng = { message : "Longitude is required" };
       }
 
       if (!lat || validator.isEmpty(lat)) {
@@ -44,25 +55,60 @@ exports.save = (token, param) => {
       if (!contents || validator.isEmpty(contents)) {
         isValid = false;
         validationError.errors.contents = { message : "Contents is required" };
-      }
+      }      
 
       if (!isValid) reject();
       /* 유효성 체크 끝 */
 
-      // 3. DB에 저장하기
-      const messageData = {
-        idx, id, nickname, avatar, lng, lat, contents
-      };
+      let response = '';
 
-      try {
-        await messageModel.save(messageData);
-      } catch (error) {
-        // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
-        return reject(error);
+      if (type === 'LoudSpeaker') { // 확성기일 경우 해당 유저의 잔여 point를 조회한다.
+        let points = 0;
+
+        try {
+          points = await userModel.selectPoints(idx);      
+        } catch (err) {
+          // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
+          reject(err);
+        }
+
+        if (points < 100) { // 포인트가 100보다 모자랄 경우엔 보낼 수 없다.
+          response = {
+            status: 401,
+            message: "Not enough points",
+            data: { points }        
+          };
+          reject();
+        }
       }
 
-      // 4 등록 성공! 소켓으로 다시 반대로 쏴줘야 한다.
-      return resolve(messageData);
+      // 3. DB에 저장하기
+      const messageData = {
+        idx, id, nickname, avatar, lng, lat, type, contents
+      };    
+      
+      try {
+        result = await messageModel.save(messageData); 
+      } catch (err) {
+        // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
+        reject(err);
+      } finally {
+        if (type == 'LoudSpeaker') { // 확성기일 경우 포인트를 차감한다.
+          try {
+            await userModel.reducePoints(idx);      
+          } catch (err) {
+            // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
+            reject(err);
+          }
+        }
+      }
+      response = {
+        status: 201,
+        message: "Save Message Successfully",
+        data: result[0]
+      };
+      // 4 등록 성공! 소켓으로 다시 반대로 쏴줘야 한다. 
+      resolve(response);
     });
   });
 };
@@ -85,7 +131,10 @@ exports.selectOne = async (req, res, next) => {
     validationError.errors.idx = { message : "idx is required" };
   }
 
-  if (!isValid) return res.status(400).json(validationError);
+  if (!isValid) {
+    console.log(validationError);
+    reject();
+  }
   /* 유효성 체크 끝 */
 
   // 2. DB에서 끌고 오기
@@ -114,15 +163,25 @@ exports.selectOne = async (req, res, next) => {
  ********************/
 exports.selectAll = async (req, res, next) => {
   /* PARAM */
+  const idx = req.userData.idx;
   const page = req.body.page || req.params.page;
   
-  // 1. DB에서 끌고 오기
+  // 1. 차단 리스트 끌고 오기
+  let blocks = '';
+  try {
+    blocks = await userModel.selectBlock(idx);
+  } catch (err) {
+    // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
+    return next(err);
+  }
+
+  // 2. DB에서 끌고 오기
   let result = '';
   try {
-    result = await messageModel.selectAll(page);
-  } catch (error) {
+    result = await messageModel.selectAll(blocks, page);
+  } catch (err) {
     // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
-    return next(error);
+    return next(err);
   }
 
   // 2. 조회 성공
@@ -141,6 +200,7 @@ exports.selectAll = async (req, res, next) => {
  ********************/
 exports.selectCircle = async (req, res, next) => {
   /* PARAM */
+  const idx = req.userData.idx;
   const lng = req.body.lng || req.params.lng;
   const lat = req.body.lat || req.params.lat;
   const radius = req.body.radius || req.params.radius;
@@ -167,20 +227,29 @@ exports.selectCircle = async (req, res, next) => {
   if (!isValid) return res.status(400).json(validationError);
   /* 유효성 체크 끝 */
 
-  // 2. DB에서 끌고 오기
+  // 2. 차단 리스트 끌고 오기
+  let blocks = '';
+  try {
+    blocks = await userModel.selectBlock(idx);
+  } catch (err) {
+    // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
+    return next(err);
+  }
+
+  // 3. DB에서 끌고 오기
   let result = '';
   try {
     const conditions = {
       lng, lat, radius
     };
 
-    result = await messageModel.selectCircle(conditions, page);
+    result = await messageModel.selectCircle(conditions, blocks, page);
   } catch (error) {
     // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
     return next(error);
   }
 
-  // 3. 조회 성공
+  // 4. 조회 성공
   const respond = {
     status: 200,
     message : "Select Messages Successfully",
@@ -188,61 +257,6 @@ exports.selectCircle = async (req, res, next) => {
   };
   return res.status(200).json(respond);
 };
-
-
-exports.testsave = async (req, res, next) => {
-  /* PARAM */
-  const idx = req.userData.idx;
-  const id = req.userData.id;
-  const nickname = req.userData.nickname;
-  const avatar = req.userData.avatar;
-  const lng = req.body.lng || req.params.lng;
-  const lat = req.body.lat || req.params.lat;
-  const type = req.body.type || req.params.type;
-  const contents = req.body.contents || req.params.contents;
-  
-  /* 1. 유효성 체크하기 */
-  let isValid = true;
-
-  if (!lng || validator.isEmpty(lng)) {
-    isValid = false;
-    validationError.errors.lng = { message : "Longitude is required" };
-  }
-
-  if (!lat || validator.isEmpty(lat)) {
-    isValid = false;
-    validationError.errors.lat = { message : "Latitude is required" };
-  }
-
-  if (!contents || validator.isEmpty(contents)) {
-    isValid = false;
-    validationError.errors.contents = { message : "Contents is required" };
-  }
-
-  if (!isValid) return res.status(400).json(validationError);
-  /* 유효성 체크 끝 */
-
-  // 2. DB에 저장하기
-  let result = '';
-  try {
-    const messageData = {
-      idx, id, nickname, avatar, lng, lat, type, contents
-    };
-
-    result = await messageModel.save(messageData);
-  } catch (error) {
-    // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
-    return next(error);
-  }
-
-  // 3. 저장 성공
-  const respond = {
-    status: 201,
-    message : "Create Message Successfully",
-    data: result
-  };
-  return res.status(201).json(respond);
-}
 
 
 
@@ -287,5 +301,89 @@ exports.like = async (req, res, next) => {
     message
   };
 
+  return res.status(201).json(respond);
+}
+
+
+
+exports.testsave = async (req, res, next) => {
+  /* PARAM */
+  const idx = req.userData.idx;
+  const id = req.userData.id;
+  const nickname = req.userData.nickname;
+  const avatar = req.userData.avatar;
+  const lng = req.body.lng || req.params.lng;
+  const lat = req.body.lat || req.params.lat;
+  const type = req.body.type || req.params.type || "Message";
+  const contents = req.body.contents || req.params.contents;
+  
+  /* 1. 유효성 체크하기 */
+  let isValid = true;
+
+  if (!lng || validator.isEmpty(lng)) {
+    isValid = false;
+    validationError.errors.lng = { message : "Longitude is required" };
+  }
+
+  if (!lat || validator.isEmpty(lat)) {
+    isValid = false;
+    validationError.errors.lat = { message : "Latitude is required" };
+  }
+
+  if (!contents || validator.isEmpty(contents)) {
+    isValid = false;
+    validationError.errors.contents = { message : "Contents is required" };
+  }
+
+  if (!isValid) return res.status(400).json(validationError);
+  /* 유효성 체크 끝 */
+
+  if (type == 'LoudSpeaker') { // 확성기일 경우 해당 유저의 잔여 point를 조회한다.
+    let points = 0;
+
+    try {
+      points = await userModel.selectPoints(idx);      
+    } catch (err) {
+      // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
+      return next(err);
+    }
+
+    if (points < 100) { // 포인트가 100보다 모자랄 경우엔 보낼 수 없다.
+      return res.status(401).json({
+        status: 401,
+        message: "Not enough points",
+        data: { points }        
+      });
+    }
+  }
+
+  // 2. DB에 저장하기
+  let result = '';
+  try {
+    const messageData = {
+      idx, id, nickname, avatar, lng, lat, type, contents
+    };    
+
+    result = await messageModel.save(messageData);
+  } catch (error) {
+    // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
+    return next(error);
+  } finally {
+    if (type == 'LoudSpeaker') { // 확성기일 경우 포인트를 차감한다.
+      try {
+        await userModel.reducePoints(idx);      
+      } catch (err) {
+        // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
+        return next(err);
+      }
+    }
+  }
+
+  // 3. 저장 성공
+  const respond = {
+    status: 201,
+    message : "Create Message Successfully",
+    data: result
+  };
   return res.status(201).json(respond);
 }

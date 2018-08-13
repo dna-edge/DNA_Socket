@@ -1,14 +1,15 @@
 const mongo = global.utils.mongo;
 const paginationCount = require('../utils/config').pagination_count;
+const helpers = require('../utils/helpers');
 
 /*******************
  *  Save
- *  @param: dmData = {idx, roomidx, contents}
+ *  @param: dmData = {idx, roomIdx, contents}
  ********************/
 exports.save = (dmData) => {
-  // 1. roomidx 값으로 room 값 찾아오기 (없으면 전송 불가)
+  // 1. roomIdx 값으로 room 값 찾아오기 (없으면 전송 불가)
   return new Promise((resolve, reject) => {
-    mongo.roomModel.selectOne(dmData.roomidx, (err, room) => {
+    mongo.roomModel.selectOne(dmData.roomIdx, (err, room) => {
       if (err) {
         const customErr = new Error("Error occrred while selecting Room: " + err);
         reject(customErr);  
@@ -27,12 +28,13 @@ exports.save = (dmData) => {
     return new Promise((resolve, reject) => {
       const dm = new mongo.dmModel(
         {
-          idx: dmData.idx,
-          contents: dmData.contents
+          sender_idx: dmData.idx,
+          contents: dmData.contents,
+          created_at: helpers.getCurrentDate()
         }
       );
       // 3. 해당 room에 dm 추가하기 (저장하기)
-      mongo.roomModel.saveDM(dmData.roomidx, dm, (err, result) => {
+      mongo.roomModel.saveDM(dmData.roomIdx, dm, (err, result) => {
         if (err) {
           const customErr = new Error("Error occrred while Save Direct Message: " + err);
           reject(customErr);        
@@ -45,11 +47,12 @@ exports.save = (dmData) => {
   .then((dm) => {
     return new Promise((resolve, reject) => {
       // 4. 해당 채팅방의 updated_at 변경하기
-      mongo.roomModel.updated(dmData.roomidx, (err, result) => {
+      mongo.roomModel.updated(dmData.roomIdx, (err, result) => {
         if (err) {
           const customErr = new Error("Error occrred while Update Room's updated_at: " + err);
           reject(customErr);        
         } else {
+          dm.roomIdx = dmData.roomIdx;
           resolve(dm);
         }
       });

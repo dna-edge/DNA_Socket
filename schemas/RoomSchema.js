@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const paginationCount = require('../utils/config').pagination_count;
+const helpers = require('../utils/helpers');
 const dmSchema = global.utils.mongo.dmSchema.obj;
 
 let Schema = {};
@@ -8,18 +9,11 @@ let Schema = {};
 Schema.createSchema = (mongoose) => {
   const roomSchema = mongoose.Schema({
     idx: { type: Number, require: true, index: { unique: true } },
-    user1: {
-      idx: { type: Number, required: true},
-      id: { type: String, required: true },
+    users : [{
+      idx: { type: Number, required: true },
       nickname: { type: String, required: true },
       avatar: String
-    },
-    user2: {
-      idx: { type: Number, required: true},
-      id: { type: String, required: true },
-      nickname: { type: String, required: true },
-      avatar: String
-    },
+    }],
     blind: [ String ],
     messages: [ dmSchema ],
     created_at : { type : Date, index: { unique : false }, default: Date.now },
@@ -39,9 +33,9 @@ Schema.createSchema = (mongoose) => {
   // search : 해당 채팅방이 이미 존재하는지 확인
   roomSchema.static('search', function(Idxuser1, Idxuser2, callback) {
     return this.find({      
-      $or: [ 
-        { $and: [{ 'user1.idx': Idxser1 }, { 'user2.idx': Idxuser2 }] },
-        { $and: [{ 'user1.idx': Idxuser2 }, { 'user2.idx': Idxuser1 }] }
+      $and: [ 
+        { users: { $elemMatch: { idx: Idxuser1 }}}, 
+        { users: { $elemMatch: { idx: Idxuser2 }}}
       ]
     }, callback);
   });
@@ -54,14 +48,10 @@ Schema.createSchema = (mongoose) => {
   // selectAll : 전체 조회하기
   roomSchema.static('selectAll', function(userIdx, page, callback) {
     if (!page) { // 페이지 인자가 없음 : 페이지네이션이 되지 않은 경우
-      return this.find({
-          $or: [{ 'user1.idx': userIdx }, { 'user2.idx': userIdx }]
-        }, callback)
+      return this.find({users: { $elemMatch: { idx: Idxuser1 }}}, callback)
         .sort('-updated_at')
     } else {     // 페이지 인자가 있음 : 페이지네이션 적용
-      return this.find({
-          $or: [{ 'user1.idx': userIdx }, { 'user2.idx': userIdx }]
-        }, callback)
+      return this.find({users: { $elemMatch: { idx: Idxuser1 }}}, callback)
         .sort('-updated_at')
         .skip(parseInt(page) * paginationCount)
         .limit(paginationCount);
@@ -111,7 +101,7 @@ Schema.createSchema = (mongoose) => {
   roomSchema.static('updated', function(roomIdx, callback) {
     this.findOneAndUpdate(
       { idx: parseInt(roomIdx) },
-      { updated_at: Date.now() },
+      { updated_at: helpers.getCurrentDate() },
       callback
     );
   });

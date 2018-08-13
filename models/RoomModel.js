@@ -1,10 +1,11 @@
 const mongo = global.utils.mongo;
+const helpers = require('../utils/helpers');
 
 /*******************
  *  Open
  *  @param: roomData = {
- *            user1 = { idx, id, nickname, avatar },
- *            user2 = { idx, id, nickname, avatar }
+ *            user1 = { idx, nickname, avatar },
+ *            user2 = { idx, nickname, avatar }
  *          }
  ********************/
 exports.open = (roomData) => {  
@@ -39,7 +40,6 @@ exports.open = (roomData) => {
     .then((count) => { 
       // 3. model 생성하기
       return new Promise((resolve, reject) => {  
-        // const now = moment().format("YYYY-MM-DD HH:mm:ss");
         let idx = 0;
         
         if (count[0]) {
@@ -49,25 +49,23 @@ exports.open = (roomData) => {
         const room = new mongo.roomModel(
           {
             idx,
-            user1: {
+            users: [{
               idx: roomData.user1.idx,
-              id: roomData.user1.id,
               nickname: roomData.user1.nickname,
               avatar: roomData.user1.avatar
-            },
-            user2: {
-              idx: roomData.user2.idx,
-              id: roomData.user2.id,
+            },{
+              idx: roomData.user2.idx,              
               nickname: roomData.user2.nickname,
               avatar: roomData.user2.avatar
-            }
+            }],
+            created_at: helpers.getCurrentDate(),
+            updated_at: helpers.getCurrentDate()
           }
         );
 
         // 3. save로 저장
         room.save((err) => {
           if (err) {
-            console.log(err);
             reject(err);
           } else {
             resolve(room);
