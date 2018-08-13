@@ -38,6 +38,7 @@ exports.save = (messageData) => {
             type: "Point",
             coordinates: [messageData.lng, messageData.lat]
           },
+          type: messageData.type,
           contents: messageData.contents,
           created_at: helpers.getCurrentDate()
         }
@@ -46,7 +47,6 @@ exports.save = (messageData) => {
       // 3. save로 저장
       message.save((err) => {
         if (err) {
-          // console.log(err);
           reject(err);
         } else {
           resolve(idx);
@@ -55,7 +55,7 @@ exports.save = (messageData) => {
     });
   })
   .then((idx) => {
-    return new Promise((resolve, reject) => {      
+    return new Promise((resolve, reject) => {    
       mongo.messageModel.selectOne(idx, (err, result) => {
         if (err) {
           const customErr = new Error("Error occrred while selecting All Messages: " + err);

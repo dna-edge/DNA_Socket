@@ -30,8 +30,8 @@ Schema.createSchema = (mongoose) => {
   ********************/
 
   // count : idx의 최대값 구하기
-  messageSchema.static('count', function(callback) {
-    return this.find({}, { idx: 1 }, callback)
+  messageSchema.static('count', async function(callback) {
+    return await this.find({}, { idx: 1 }, callback)
       .sort({ "idx": -1 }).limit(1);
   });
 

@@ -1,5 +1,6 @@
 const validator = require('validator');
 
+const authModel = require('../models/AuthModel');
 const dmModel = require('../models/DMModel');
 const roomModel = require('../models/RoomModel');
 
@@ -11,15 +12,73 @@ let validationError = {
 
 /*******************
  *  Save
- *  @param: roomIdx, contents
- *  TODO 저장 이후 처리 (socket emit, PUSH)
+ *  @param: token, param = { roomIdx, type, contents }
+ *  TODO 에러 코드 정리 및 PUSH
  ********************/
-exports.save = (req, res, next) => {
-  const token = req.headers.token;
-  // 1. 먼저 해당 jwt가 유효한지 확인
-  returnAuth(token)
+exports.save = (token, param) => {
+  // 1. 먼저 해당 jwt가 유효한지 확인 
+  return new Promise((resolve, reject) => {
+    authModel.auth(token, (err, userData) => {
+      if (err) {
+        console.log(err);
+        reject(err);
+      } else {
+        resolve(userData);
+      }
+    });
+  })
   .then((userData) => {
-    console.log(1);
+    return new Promise(async (resolve, reject) => {     
+      /* PARAM */
+      const idx = userData.idx;
+      const roomIdx = param.roomIdx;
+      const type = param.type;
+      const contents = param.contents;
+      
+      /* 1. 유효성 체크하기 */
+      let isValid = true;
+
+      if (roomIdx === undefined || roomIdx === null || roomIdx === "") {
+        isValid = false;
+        validationError.errors.roomIdx = { message : "Room index is required" };
+      }
+
+      if (!contents || validator.isEmpty(contents)) {
+        isValid = false;
+        validationError.errors.contents = { message : "Direct Message Contents is required" };
+      }
+
+      let response = '';
+
+      if (!isValid) {
+        response = validationError;
+      }
+      /* 유효성 체크 끝 */
+
+      // 2. DB에 저장 요청하기
+      let result = '';
+      try {
+        const dmData = {
+          idx, roomIdx, contents
+        };
+
+        if (isValid) result = await dmModel.save(dmData);
+      } catch (error) {
+        // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
+        return next(error);
+      }
+
+      // 3. 저장 성공
+      if (result) {
+        response = {
+          status: 201,
+          message : "Create Direct Message Successfully",
+          result
+        };
+      }
+      // 4 등록 성공! 소켓으로 다시 반대로 쏴줘야 한다. 
+      resolve(response);
+    });
   });
 }
 
@@ -88,8 +147,6 @@ exports.testsave = async (req, res, next) => {
   const type = req.body.type || req.params.type;
   const contents = req.body.contents || req.params.contents;
   
-  console.log()
-
   /* 1. 유효성 체크하기 */
   let isValid = true;
 

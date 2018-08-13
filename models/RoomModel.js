@@ -40,7 +40,6 @@ exports.open = (roomData) => {
     .then((count) => { 
       // 3. model 생성하기
       return new Promise((resolve, reject) => {  
-        // const now = moment().format("YYYY-MM-DD HH:mm:ss");
         let idx = 0;
         
         if (count[0]) {
@@ -67,7 +66,6 @@ exports.open = (roomData) => {
         // 3. save로 저장
         room.save((err) => {
           if (err) {
-            console.log(err);
             reject(err);
           } else {
             resolve(room);
