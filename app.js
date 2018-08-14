@@ -13,7 +13,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-global.env = require('./env');
+require('dotenv').config();
 global.utils = require('./utils/global');
 require('./routes')(app);
 
