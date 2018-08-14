@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken');
  *  @param: (Access) token
  ********************/
 exports.auth = (token, done) => {
-  jwt.verify(token, global.env.JWT_CERT, (err, decoded) => {
+  jwt.verify(token, process.env.JWT_CERT, (err, decoded) => {
     if (err) {
       let customErr = '';
 

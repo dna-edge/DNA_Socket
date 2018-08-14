@@ -16,7 +16,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 require('dotenv').config();
 global.utils = require('./utils/global');
 require('./routes')(app);
-
 app.get('/message', function(req, res){
   res.sendFile(__dirname + '/test_message.html');
 });
@@ -25,7 +24,7 @@ app.get('/dm', function(req, res){
   res.sendFile(__dirname + '/test_dm.html');
 });
 
-const PORT = 9014;
+const PORT = 9013;
 const http = require('http').Server(app);
 const socket = require('./utils/socket').init(http);
 

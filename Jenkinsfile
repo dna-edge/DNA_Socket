@@ -28,7 +28,7 @@ node {
         } catch (err) {}
         
         sh 'docker build -t socketapiserver --no-cache .'
-        sh 'docker run -d -p 9014:9014 --name=socketapiserver socketapiserver:latest'     
+        sh 'docker run -d -p 9013:9013 --name=socketapiserver socketapiserver:latest'     
       }
     }
   } catch (e) {
