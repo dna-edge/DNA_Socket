@@ -7,7 +7,7 @@ const helpers = require('../utils/helpers');
  ********************/
 exports.save = (messageData) => {
   // 1. idx 최대값 구하기 
-  return new Promise((resolve, reject) => {  
+  return new Promise((resolve, reject) => { 
     mongo.messageModel.count((err, result) => {
       if (err) {
         const customErr = new Error("Error occrred while Counting Messages: " + err);
@@ -55,7 +55,7 @@ exports.save = (messageData) => {
     });
   })
   .then((idx) => {
-    return new Promise((resolve, reject) => {    
+    return new Promise((resolve, reject) => {   
       mongo.messageModel.selectOne(idx, (err, result) => {
         if (err) {
           const customErr = new Error("Error occrred while selecting All Messages: " + err);

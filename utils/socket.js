@@ -35,7 +35,7 @@ exports.init = (http) => {
     ********************/
     // 4. 클라에서 보내온 정보를 레디스에 저장
     socket.on('store', (data) => {    
-      storeClientInfo(socket.id, JSON.stringify(data));        
+      storeClientInfo(socket.id, JSON.stringify(data));      
     });
 
     // 5. 클라가 주기적으로 현재 위치를 업데이트하면 이를 레디스에서 갱신한다.
@@ -57,24 +57,29 @@ exports.init = (http) => {
     // 새로 메시지를 생성했을 경우에는
     socket.on('save_msg', async (token, messageData) => {
       // 1. DB에 저장하기 위해 컨트롤러를 호출한다.
-      let response = '';
+      let response = '';  
 
       try {
         response = await messageCtrl.save(token, messageData);
       } catch (err) {
+        console.log(err);
         response = errorCode[err];
       }
 
       // 2. 레디스에 저장된 클라이언트의 리스트를 가져온다.
-      const clients = redis.hgetall('clients', (err, result) => {
+      const clients = redis.hgetall('clients', (err, object) => {
+        if (err) {
+          console.log(err);
+        }
         let count = 0;
-
-        Object.keys(result).forEach(function (key) { 
+        
+        Object.keys(object).forEach(function (key) { 
           // 3. 저장한 결과값을 연결된 소켓에 쏴주기 위해 필터링한다.
-          const value = JSON.parse(result[key]);
+          const value = JSON.parse(object[key]);
           const distance = geolib.getDistance(
-            {latitude: value.location[1], longitude: value.location[0]}, // 소켓의 현재 위치 (순서 주의!)
-            {latitude: response.data.result.lat, longitude: response.data.result.lng}      // 메시지 발생 위치
+            { latitude: value.location[1], longitude: value.location[0] }, // 소켓의 현재 위치 (순서 주의!)
+            { latitude: response.result.location.coordinates[1], 
+              longitude: response.result.location.coordinates[0] }      // 메시지 발생 위치
           );
           if (value.radius >= distance) { // 거리 값이 설정한 반경보다 작을 경우에만 이벤트를 보내준다.            
             socket.broadcast.to(key).emit('new_msg', response);
@@ -84,8 +89,6 @@ exports.init = (http) => {
         console.log("message sent to ["+count+"] client");
         socket.emit('new_msg', response);
       });   
-
-      io.emit('new_message', response);
     });
 
 

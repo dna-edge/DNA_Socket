@@ -54,7 +54,7 @@ exports.open = async (req, res, next) => {
   const respond = {
     status: 201,
     message : "Create Direct Mesesage Room Successfully",
-    data: result
+    result
   };
   return res.status(201).json(respond);
 }
@@ -81,7 +81,7 @@ exports.selectAll = async (req, res, next) => {
   const respond = {
     status: 200,
     message : "Select Rooms Successfully",
-    data: result
+    result
   };
   return res.status(200).json(respond);
 };

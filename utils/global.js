@@ -1,28 +1,26 @@
-const env = global.env;
 const config = require('../utils/config');
 
 /* redis */
-const redis = require('redis').createClient(env.REDIS_PORT, env.EC2_HOST);
-redis.auth(env.DB_PASSWORD);
+const redis = require('redis').createClient(process.env.REDIS_PORT, process.env.EC2_HOST);
+redis.auth(process.env.REDIS_PASSWORD);
 
 /* mysql */
 const mysql = require('mysql');
-
 const connection = mysql.createConnection({
-  host: env.DB_HOST,
-  port: env.DB_PORT,
-  user: env.DB_USER,
-  password: env.DB_PASSWORD,
-  database: env.DB_NAME
+  host: process.env.MYSQL_HOST,
+  port: process.env.MYSQL_PORT,
+  user: process.env.MYSQL_USER,
+  password: process.env.MYSQL_PASSWORD,
+  database: process.env.DB_NAME
 });
 
 /* mongodb */
 const mongoose = require('mongoose');
 
-const url = `mongodb://${env.EC2_HOST}:${env.MONGO_PORT}/${env.DB_NAME}`;
+const url = `mongodb://${process.env.EC2_HOST}:${process.env.MONGO_PORT}/${process.env.DB_NAME}`;
 const options = {
-  user: env.DB_USER,
-  pass: env.DB_PASSWORD,
+  user: process.env.MONGO_USERNAME,
+  pass: process.env.MONGO_PASSWORD,
   useNewUrlParser: true,
   promiseLibrary: global.Promise
 };

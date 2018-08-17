@@ -13,10 +13,9 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-global.env = require('./env');
+require('dotenv').config();
 global.utils = require('./utils/global');
 require('./routes')(app);
-
 app.get('/message', function(req, res){
   res.sendFile(__dirname + '/test_message.html');
 });
@@ -25,7 +24,7 @@ app.get('/dm', function(req, res){
   res.sendFile(__dirname + '/test_dm.html');
 });
 
-const PORT = 9014;
+const PORT = 9013;
 const http = require('http').Server(app);
 const socket = require('./utils/socket').init(http);
 
@@ -45,7 +44,7 @@ process.on('exit', exitHandler.bind(null,{cleanup:true}));            // do some
 process.on('SIGINT', exitHandler.bind(null, {exit:true}));            // catches ctrl+c event
 process.on('SIGUSR1', exitHandler.bind(null, {exit:true}));           // catches "kill pid"
 process.on('SIGUSR2', exitHandler.bind(null, {exit:true}));
-process.on('uncaughtException', exitHandler.bind(null, {exit:true})); // uncaught exceptions
+// process.on('uncaughtException', exitHandler.bind(null, {exit:true})); // uncaught exceptions
 
 http.listen(PORT, () => {
   console.info(`[DNA-SocketApiServer] Listening on Port ${PORT}`);

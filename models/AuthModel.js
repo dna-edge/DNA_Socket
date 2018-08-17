@@ -7,15 +7,17 @@ const jwt = require('jsonwebtoken');
  *  @param: (Access) token
  ********************/
 exports.auth = (token, done) => {
-  jwt.verify(token, global.env.JWT_CERT, (err, decoded) => {
+  jwt.verify(token, process.env.JWT_CERT, (err, decoded) => {
     if (err) {
       let customErr = '';
 
       switch (err.message) {
         case 'jwt expired':
-          return done(10400);
+          return done(11400);
         case 'invalid token':
-          return done(10411);
+          return done(12400);
+        case 'jwt malformed':
+          return done(12400);
         default:
           return done(err.message);
       }

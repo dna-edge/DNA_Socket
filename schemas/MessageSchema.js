@@ -44,11 +44,11 @@ Schema.createSchema = (mongoose) => {
   messageSchema.static('selectAll', function(blocks, page, callback) {
     if (!page) { // 페이지 인자가 없음 : 페이지네이션이 되지 않은 경우
       return this.find({ 'user.idx': { $nin: blocks }}, callback)
-        .sort('-created_at');
+        .sort('created_at');
     } else {     // 페이지 인자가 있음 : 페이지네이션 적용
       return this.find({ 'user.idx': { $nin: blocks }}, callback)
-        .sort('-created_at')
-        .skip(parseInt(page) * paginationCount).limit(paginationCount);
+        .sort('created_at')
+        .skip((page-1) * paginationCount).limit(paginationCount);
     }
   });
 
@@ -76,7 +76,7 @@ Schema.createSchema = (mongoose) => {
           }
         )
         .sort('-created_at')
-        .skip(page * paginationCount).limit(paginationCount);
+        .skip((page-1) * paginationCount).limit(paginationCount);
     }
   });
 
