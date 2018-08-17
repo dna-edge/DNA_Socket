@@ -44,7 +44,7 @@ process.on('exit', exitHandler.bind(null,{cleanup:true}));            // do some
 process.on('SIGINT', exitHandler.bind(null, {exit:true}));            // catches ctrl+c event
 process.on('SIGUSR1', exitHandler.bind(null, {exit:true}));           // catches "kill pid"
 process.on('SIGUSR2', exitHandler.bind(null, {exit:true}));
-process.on('uncaughtException', exitHandler.bind(null, {exit:true})); // uncaught exceptions
+// process.on('uncaughtException', exitHandler.bind(null, {exit:true})); // uncaught exceptions
 
 http.listen(PORT, () => {
   console.info(`[DNA-SocketApiServer] Listening on Port ${PORT}`);

@@ -42,12 +42,12 @@ exports.save = (token, param) => {
       /* 2. 유효성 체크하기 */
       let isValid = true;
 
-      if (!lng || validator.isEmpty(lng)) {
+      if (!lng || lng === undefined || lng === '') {
         isValid = false;
         validationError.errors.lng = { message : "Longitude is required" };
       }
 
-      if (!lat || validator.isEmpty(lat)) {
+      if (!lat || lat === undefined || lat === '') {
         isValid = false;
         validationError.errors.lat = { message : "Latitude is required" };
       }
@@ -76,7 +76,7 @@ exports.save = (token, param) => {
           response = {
             status: 401,
             message: "Not enough points",
-            data: { points }        
+            result: { points }        
           };
           reject();
         }
@@ -105,7 +105,7 @@ exports.save = (token, param) => {
       response = {
         status: 201,
         message: "Save Message Successfully",
-        data: result[0]
+        result: result[0]
       };
       // 4 등록 성공! 소켓으로 다시 반대로 쏴줘야 한다. 
       resolve(response);
@@ -150,7 +150,7 @@ exports.selectOne = async (req, res, next) => {
   const respond = {
     status: 200,
     message : "Select Messages Successfully",
-    data: result
+    result: result
   };
   return res.status(200).json(respond);
 }
@@ -188,7 +188,7 @@ exports.selectAll = async (req, res, next) => {
   const respond = {
     status: 200,
     message : "Select Messages Successfully",
-    data: result
+    result: result
   };
   return res.status(200).json(respond);
 }
@@ -205,21 +205,20 @@ exports.selectCircle = async (req, res, next) => {
   const lat = req.body.lat || req.params.lat;
   const radius = req.body.radius || req.params.radius;
   const page = req.body.page || req.params.page;  
-  
   /* 1. 유효성 체크하기 */
   let isValid = true;
 
-  if (!lng || validator.isEmpty(lng)) {
+  if (!lng || lng === '' || lng === undefined) {
     isValid = false;
     validationError.errors.lng = { message : "Longitude is required" };
   }
 
-  if (!lat || validator.isEmpty(lat)) {
+  if (!lat || lat === '' || lat === undefined) {
     isValid = false;
     validationError.errors.lat = { message : "Latitude is required" };
   }
 
-  if (!radius || validator.isEmpty(radius)) {
+  if (!radius || radius === '' || radius === undefined) {
     isValid = false;
     validationError.errors.radius = { message : "Radius is required" };
   }
@@ -253,7 +252,7 @@ exports.selectCircle = async (req, res, next) => {
   const respond = {
     status: 200,
     message : "Select Messages Successfully",
-    data: result
+    result
   };
   return res.status(200).json(respond);
 };
@@ -352,7 +351,7 @@ exports.testsave = async (req, res, next) => {
       return res.status(401).json({
         status: 401,
         message: "Not enough points",
-        data: { points }        
+        result: { points }        
       });
     }
   }
@@ -383,7 +382,7 @@ exports.testsave = async (req, res, next) => {
   const respond = {
     status: 201,
     message : "Create Message Successfully",
-    data: result
+    result 
   };
   return res.status(201).json(respond);
 }

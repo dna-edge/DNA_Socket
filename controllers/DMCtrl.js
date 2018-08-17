@@ -133,7 +133,7 @@ exports.selectAll = async (req, res, next) => {
   const respond = {
     status: 200,
     message : "Select Direct Messages Successfully",
-    data: result
+    result
   };
   return res.status(200).json(respond);
 }
@@ -180,7 +180,7 @@ exports.testsave = async (req, res, next) => {
   const respond = {
     status: 201,
     message : "Create Direct Message Successfully",
-    data: { result }
+    result
   };
   return res.status(201).json(respond);
 }

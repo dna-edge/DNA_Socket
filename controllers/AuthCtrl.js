@@ -14,11 +14,14 @@ let tokenError = {
 exports.auth = (req, res, next) => {
   if (!req.headers.token) {
     tokenError.errors = { message : 'Access Token is required' };
-    return res.status(400).json(tokenError);
+    return res.status(errorCode[10400].status)
+              .json(errorCode[10400].contents);
   } else {
     authModel.auth(req.headers.token, (err, userData) => {
       if (err) {
-        return res.json(errorCode[err]);
+        console.log(err);
+        return res.status(errorCode[err].status)
+                  .json(errorCode[err].contents);
       } else {
         req.userData = userData;
         return next();
