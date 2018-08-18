@@ -25,8 +25,8 @@ app.get('/dm', function(req, res){
 });
 
 const PORT = 9013;
-const http = require('http').Server(app);
-const socket = require('./utils/socket').init(http);
+const server = require('http').Server(app);
+const socket = require('./utils/socket').init(server);
 
 process.stdin.resume(); //so the program will not close instantly
 
@@ -46,8 +46,9 @@ process.on('SIGUSR1', exitHandler.bind(null, {exit:true}));           // catches
 process.on('SIGUSR2', exitHandler.bind(null, {exit:true}));
 // process.on('uncaughtException', exitHandler.bind(null, {exit:true})); // uncaught exceptions
 
-http.listen(PORT, () => {
-  console.info(`[DNA-SocketApiServer] Listening on Port ${PORT}`);
+server.listen(PORT, 'localhost', () => {
+  console.info('[DNA-SocketApiServer] Listening on port %s at %s', 
+  server.address().port, server.address().address);
 });
 
 module.exports = app;
