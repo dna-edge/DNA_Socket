@@ -32,7 +32,7 @@ const storeGeoInfo = (idx, position) => {
 
 exports.init = (http) => {
   /* TODO 테스트용으로 레디스 초기화 (추후 꼭 삭제) */
-  storeClient("s1rzGthx73mJqJ5KAAAG", "{\"position\":[127.097422,37.590531],\"radius\":500}");       
+  storeClient("s1rzGthx73mJqJ5KAAAG", "{\"position\":[127.197422,37.590531],\"radius\":500}");       
   storeClient("7WB-k5qboL6Ekp4TAAAH", "{\"position\":[127.099696,37.592049],\"radius\":500}");       
   storeClient("Ubw5zXKj-2xhMuYSAAAA", "{\"position\":[127.097695,37.590571],\"radius\":500}");       
   storeClient("UIZA0ogMyaXh5HyBAAAB", "{\"position\":[127.097622,37.591479],\"radius\":500}");      
@@ -40,7 +40,7 @@ exports.init = (http) => {
   storeInfo(102, "{\"nickname\":\"test2\", \"avatar\": \"null\"}");
   storeInfo(103, "{\"nickname\":\"test3\", \"avatar\": \"null\"}");
   storeInfo(104, "{\"nickname\":\"test4\", \"avatar\": \"null\"}");  
-  storeGeoInfo(101, [127.097422,37.590531]);
+  storeGeoInfo(101, [127.197422,37.590531]);
   storeGeoInfo(102, [127.099696,37.592049]);
   storeGeoInfo(103, [127.097695,37.590571]);
   storeGeoInfo(104, [127.097622,37.591479]);
@@ -87,20 +87,22 @@ exports.init = (http) => {
       if (type === "geo") {
         const position = data.position;
         const geoList = await new Promise((resolve, reject) => {
+          // nearby 함수
+          // @param : {위도, 경도}, 반경
           geo.nearby({latitude: position[1], longitude: position[0]}, data.radius, 
-            (err, locations) => {
+            (err, positions) => {
               if (err) {
                 console.log(err);
                 reject(err);
               } else {
-                resolve(locations);
+                resolve(positions);
               }
             });
         })
-        .then((locations) => {
+        .then((positions) => {
           return new Promise((resolve, reject) => {
             let infoList = [];
-            locations.map(async (idx, i) => {
+            positions.map(async (idx, i) => {
               await new Promise((resolve, reject) => {
                 redis.hmget('info', idx, (err, info) => {
                   if (err) {
@@ -117,7 +119,7 @@ exports.init = (http) => {
                     
                     infoList.push(result);
 
-                    if (i+1 === locations.length) {
+                    if (i+1 === positions.length) {
                       socket.emit("geo", infoList);
                     }
                   }
@@ -165,9 +167,9 @@ exports.init = (http) => {
           // 3. 저장한 결과값을 연결된 소켓에 쏴주기 위해 필터링한다.
           const value = JSON.parse(object[key]);
           const distance = geolib.getDistance(
-            { latitude: value.location[1], longitude: value.location[0] }, // 소켓의 현재 위치 (순서 주의!)
-            { latitude: response.result.location.coordinates[1], 
-              longitude: response.result.location.coordinates[0] }      // 메시지 발생 위치
+            { latitude: value.position[1], longitude: value.position[0] }, // 소켓의 현재 위치 (순서 주의!)
+            { latitude: response.result.position.coordinates[1], 
+              longitude: response.result.position.coordinates[0] }      // 메시지 발생 위치
           );
           if (value.radius >= distance) { // 거리 값이 설정한 반경보다 작을 경우에만 이벤트를 보내준다.            
             socket.broadcast.to(key).emit('new_msg', response);

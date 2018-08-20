@@ -11,7 +11,7 @@ Schema.createSchema = (mongoose) => {
       idx: { type: Number, required: true },
       nickname: { type: String, required: true },
       avatar: String},
-    location: {
+    position: {
       type: { type: String, default: "Point"},
       coordinates: [{ type: Number }]
     },
@@ -57,7 +57,7 @@ Schema.createSchema = (mongoose) => {
     /* where 안에 들어가는 이름은 해당 컬럼의 이름임에 주의한다! */
     if (!page) { // 페이지 인자가 없음 : 페이지네이션이 되지 않은 경우
       return this.find({ 'user.idx': { $nin: blocks }}, callback)
-        .where('location')
+        .where('position')
         .within(
           {
             center : [parseFloat(conditions.lng), parseFloat(conditions.lat)],
@@ -67,7 +67,7 @@ Schema.createSchema = (mongoose) => {
         ).sort('-created_at');
     } else {     // 페이지 인자가 있음 : 페이지네이션 적용
       return this.find({ 'user.idx': { $nin: blocks }}, callback)
-        .where('location')
+        .where('position')
         .within(
           {
             center : [parseFloat(conditions.lng), parseFloat(conditions.lat)],

@@ -34,7 +34,7 @@ exports.save = (messageData) => {
             nickname: messageData.nickname,
             avatar: messageData.avatar
           },
-          location: {
+          position: {
             type: "Point",
             coordinates: [messageData.lng, messageData.lat]
           },
