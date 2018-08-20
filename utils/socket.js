@@ -1,6 +1,7 @@
 const redis = global.utils.redis;
 
 const geolib = require('geolib');
+var geo = require('georedis').initialize(redis);
 
 const messageCtrl = require('../controllers/MessageCtrl');
 const dmCtrl = require('../controllers/DMCtrl');
@@ -8,21 +9,41 @@ const helpers = require('./helpers');
 const errorCode = require('./error').code;
 const config = require('./config');
 
-const storeClientInfo = (key, value) => {
+const storeClient = (key, value) => {
   redis.hmset('clients',              // redis Key
   key,                                // redis Value / hashmap Key    (socket id)
   value);                             // redis Value / hashmap Value  (client info)
+};
+
+const storeInfo = (idx, info) => {
+  redis.hmset('info',
+  idx, 
+  info);
 }
+
+const storeGeoInfo = (idx, position) => {
+  geo.addLocation(idx, 
+    { latitude: position[1], longitude: position[0] });
+};
+
 // 정보가 레디스에 존재하는지 체크하지 않아도 자동으로 갱신된다.
 // This command overwrites any specified fields already existing in the hash.
 // If key does not exist, a new key holding a hash is created.      
 
 exports.init = (http) => {
   /* TODO 테스트용으로 레디스 초기화 (추후 꼭 삭제) */
-  storeClientInfo("s1rzGthx73mJqJ5KAAAG", "{\"location\":[127.097622,37.591479],\"radius\":50}");       
-  storeClientInfo("7WB-k5qboL6Ekp4TAAAH", "{\"location\":[127.097695,37.590571],\"radius\":50}");       
-  storeClientInfo("Ubw5zXKj-2xhMuYSAAAA", "{\"location\":[127.099696,37.592049],\"radius\":50}");       
-  storeClientInfo("UIZA0ogMyaXh5HyBAAAB", "{\"location\":[127.063810,37.510122],\"radius\":50}");    
+  storeClient("s1rzGthx73mJqJ5KAAAG", "{\"position\":[127.097422,37.590531],\"radius\":500}");       
+  storeClient("7WB-k5qboL6Ekp4TAAAH", "{\"position\":[127.099696,37.592049],\"radius\":500}");       
+  storeClient("Ubw5zXKj-2xhMuYSAAAA", "{\"position\":[127.097695,37.590571],\"radius\":500}");       
+  storeClient("UIZA0ogMyaXh5HyBAAAB", "{\"position\":[127.097622,37.591479],\"radius\":500}");      
+  storeInfo(101, "{\"nickname\":\"test1\", \"avatar\": \"null\"}");
+  storeInfo(102, "{\"nickname\":\"test2\", \"avatar\": \"null\"}");
+  storeInfo(103, "{\"nickname\":\"test3\", \"avatar\": \"null\"}");
+  storeInfo(104, "{\"nickname\":\"test4\", \"avatar\": \"null\"}");  
+  storeGeoInfo(101, [127.097422,37.590531]);
+  storeGeoInfo(102, [127.099696,37.592049]);
+  storeGeoInfo(103, [127.097695,37.590571]);
+  storeGeoInfo(104, [127.097622,37.591479]);
 
   const io = require('socket.io')(http, 
     {'pingInterval': config.ping_interval, 'pingTimeout': config.ping_timeout});
@@ -34,13 +55,80 @@ exports.init = (http) => {
      * 소켓 연결
     ********************/
     // 4. 클라에서 보내온 정보를 레디스에 저장
-    socket.on('store', (data) => {    
-      storeClientInfo(socket.id, JSON.stringify(data));      
+    socket.on('store', (data) => {
+      const idx = data.customId;
+
+      const client = {
+        position: data.position,
+        radius: data.radius
+      };
+
+      const info = {
+        nickname: data.nickname,
+        avatar: data.avatar
+      };
+
+      if(idx && idx !== undefined){
+        storeClient(socket.id, JSON.stringify(client));
+        storeInfo(idx, JSON.stringify(info));
+        storeGeoInfo(idx, data.position);
+      }      
     });
 
     // 5. 클라가 주기적으로 현재 위치를 업데이트하면 이를 레디스에서 갱신한다.
-    socket.on('update', (data) => {
-      storeClientInfo(socket.id, JSON.stringify(data));
+    socket.on('update', async (type, data) => {      
+      storeClient(socket.id, JSON.stringify(data));
+
+      // 6. 해당 위치와 radius에 맞는 접속자와 접속중인 친구들을 찾아 보내준다.
+      //    유저에게 type을 받아서, 이에 맞는 정보를 찾아서 보내주면 된다.
+      //    geo : 현재 위치와 반경 내에 존재하는 접속자 리스트 return
+      //    dm  : 접속 중인 친구 리스트 return
+
+      if (type === "geo") {
+        const position = data.position;
+        const geoList = await new Promise((resolve, reject) => {
+          geo.nearby({latitude: position[1], longitude: position[0]}, data.radius, 
+            (err, locations) => {
+              if (err) {
+                console.log(err);
+                reject(err);
+              } else {
+                resolve(locations);
+              }
+            });
+        })
+        .then((locations) => {
+          return new Promise((resolve, reject) => {
+            let infoList = [];
+            locations.map(async (idx, i) => {
+              await new Promise((resolve, reject) => {
+                redis.hmget('info', idx, (err, info) => {
+                  if (err) {
+                    console.log(err);
+                    reject(err);
+                  }
+                  else {
+                    const json = JSON.parse(info[0]);
+                    const result = {
+                      idx,
+                      nickname: json.nickname,
+                      avatar: json.avatar
+                    };
+                    
+                    infoList.push(result);
+
+                    if (i+1 === locations.length) {
+                      socket.emit("geo", infoList);
+                    }
+                  }
+                });
+              });
+            });
+          });
+        });     
+      } else if (type === "dm"){
+
+      }
     });
 
     // 5. 클라의 연결이 종료되었을 경우 레디스에서 해당 정보를 삭제한다.

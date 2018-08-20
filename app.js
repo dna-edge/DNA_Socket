@@ -37,36 +37,19 @@ process.on('SIGUSR1', exitHandler.bind(null, {exit:true}));           // catches
 process.on('SIGUSR2', exitHandler.bind(null, {exit:true}));
 // process.on('uncaughtException', exitHandler.bind(null, {exit:true})); // uncaught exceptions
 
-/* SSL */
-const lex = require('greenlock-express').create({
-  version: 'v02',
-  configDir: '/etc/letsencrypt',
-  server: 'staging',
-  approveDomains: (opts, certs, cb) => {
-    if (certs) {
-      opts.domains = ['localhost', '127.0.0.1'];
-    } else {
-      opts.email = 'soyoungpark.me@gmail.com';
-      opts.agreeTos = true;
-    }
-    cb(null, { options: opts, certs });
-  },
-  renewWithin: 81 * 24 * 60 * 60 * 1000,
-  renewBy: 80 * 24 * 60 * 60 * 1000,
+// const server = require('http')
+//   .createServer(lex.middleware(require('redirect-https')()))
+
+const server = require('http').Server(app);
+const socket = require('./utils/socket').init(server);
+
+server.listen(process.env.PORT, process.env.HOST, () => {
+  console.info('[DNA-SocketApiServer] Listening on port %s at %s', 
+  process.env.PORT, process.env.HOST);
 });
 
-const server = require('http')
-  .createServer(lex.middleware(require('redirect-https')()))
-  
-const socket = require('./utils/socket').init(server);
-server.listen(process.env.PORT);
 
 module.exports = app;
-
-// server.listen(PORT, 'localhost', () => {
-//   console.info('[DNA-SocketApiServer] Listening on port %s at %s', 
-//   server.address().port, server.address().address);
-// });
 
 // app.get('/message', function(req, res){
 //   res.sendFile(__dirname + '/test_message.html');
