@@ -22,11 +22,13 @@ require('./routes')(app);
 process.stdin.resume(); //so the program will not close instantly
 
 function exitHandler(options, exitCode) {
-  if (options.cleanup || exitCode || exitCode === 0) {
+  if (options.cleanup || exitCode || exitCode === 0 || options.exit) {
     global.utils.redis.del("clients");
-  }
+    global.utils.redis.del("geo:locations");
+    global.utils.redis.del("info");
+  }  
+
   if (options.exit) {
-    global.utils.redis.del("clients");
     process.exit();
   }
 }
