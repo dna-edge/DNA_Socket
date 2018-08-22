@@ -128,7 +128,8 @@ exports.checkUser = (userIdx, roomIdx) => {
           const customErr = new Error("Error occrred while Checking User is in Room : " + err);
           reject(customErr);        
         } else {
-          if (room[0] && (room[0].user1.idx === userIdx || room[0].user2.idx === userIdx)) { // 존재 확인!
+          if (room[0] && 
+            (room[0].users[0].idx === userIdx || room[0].users[1].idx === userIdx)) { // 존재 확인!
             resolve(true);
           } else {
             resolve(false)

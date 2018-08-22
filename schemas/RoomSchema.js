@@ -16,6 +16,7 @@ Schema.createSchema = (mongoose) => {
     }],
     blind: [ String ],
     messages: [ dmSchema ],
+    last_message: String,
     created_at : { type : Date, index: { unique : false }, default: Date.now },
     updated_at : { type : Date, index: { unique : false }, default: Date.now }
   });
@@ -48,12 +49,12 @@ Schema.createSchema = (mongoose) => {
   // selectAll : 전체 조회하기
   roomSchema.static('selectAll', function(userIdx, page, callback) {
     if (!page) { // 페이지 인자가 없음 : 페이지네이션이 되지 않은 경우
-      return this.find({users: { $elemMatch: { idx: Idxuser1 }}}, callback)
+      return this.find({users: { $elemMatch: { idx: userIdx }}}, {'messages': 0}, callback)
         .sort('-updated_at')
     } else {     // 페이지 인자가 있음 : 페이지네이션 적용
-      return this.find({users: { $elemMatch: { idx: Idxuser1 }}}, callback)
+      return this.find({users: { $elemMatch: { idx: userIdx }}}, {'messages': 0}, callback)
         .sort('-updated_at')
-        .skip(parseInt(page) * paginationCount)
+        .skip((page-1) * paginationCount)
         .limit(paginationCount);
     }    
   });
@@ -98,10 +99,10 @@ Schema.createSchema = (mongoose) => {
   });
 
   // updated : updated_at 현재 시간으로 변경하기
-  roomSchema.static('updated', function(roomIdx, callback) {
+  roomSchema.static('updated', function(roomIdx, contents, callback) {
     this.findOneAndUpdate(
       { idx: parseInt(roomIdx) },
-      { updated_at: helpers.getCurrentDate() },
+      { "$set": { updated_at: helpers.getCurrentDate(), last_message: contents }},
       callback
     );
   });

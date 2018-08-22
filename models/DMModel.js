@@ -9,7 +9,7 @@ const helpers = require('../utils/helpers');
 exports.save = (dmData) => {
   // 1. roomIdx 값으로 room 값 찾아오기 (없으면 전송 불가)
   return new Promise((resolve, reject) => {
-    mongo.roomModel.selectOne(dmData.roomIdx, (err, room) => {
+    mongo.roomModel.selectOne(parseInt(dmData.roomIdx), (err, room) => {
       if (err) {
         const customErr = new Error("Error occrred while selecting Room: " + err);
         reject(customErr);  
@@ -47,7 +47,7 @@ exports.save = (dmData) => {
   .then((dm) => {
     return new Promise((resolve, reject) => {
       // 4. 해당 채팅방의 updated_at 변경하기
-      mongo.roomModel.updated(dmData.roomIdx, (err, result) => {
+      mongo.roomModel.updated(dmData.roomIdx, dmData.contents, (err, result) => {
         if (err) {
           const customErr = new Error("Error occrred while Update Room's updated_at: " + err);
           reject(customErr);        

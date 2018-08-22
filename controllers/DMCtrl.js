@@ -143,16 +143,16 @@ exports.selectAll = async (req, res, next) => {
 exports.testsave = async (req, res, next) => {
   /* PARAM */
   const idx = req.userData.idx;
-  const roomidx = req.body.room_idx || req.params.room_idx;
+  const roomIdx = req.body.room_idx || req.params.room_idx;
   const type = req.body.type || req.params.type;
   const contents = req.body.contents || req.params.contents;
   
   /* 1. 유효성 체크하기 */
   let isValid = true;
 
-  if (!roomidx || validator.isEmpty(roomidx)) {
+  if (!roomIdx || validator.isEmpty(roomIdx)) {
     isValid = false;
-    validationError.errors.roomidx = { message : "Room index is required" };
+    validationError.errors.roomIdx = { message : "Room index is required" };
   }
 
   if (!contents || validator.isEmpty(contents)) {
@@ -167,7 +167,7 @@ exports.testsave = async (req, res, next) => {
   let result = '';
   try {
     const dmData = {
-      idx, roomidx, contents
+      idx, roomIdx, contents
     };
 
     result = await dmModel.save(dmData);
