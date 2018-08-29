@@ -1,4 +1,8 @@
 const express = require('express');
+const http = require('http');
+const https = require('https');
+const fs = require('fs');
+
 const path = require('path');
 const logger = require('morgan');
 const cookieParser = require('cookie-parser');
@@ -42,14 +46,50 @@ process.on('SIGUSR2', exitHandler.bind(null, {exit:true}));
 // const server = require('http')
 //   .createServer(lex.middleware(require('redirect-https')()))
 
-const server = require('http').Server(app);
-const socket = require('./utils/socket').init(server);
+let server, corsOptions;
+switch(process.env.NODE_ENV){
+  case 'development':    
+    corsOptions = {
+      origin: 'http://localhost:9010',
+      credentials : true
+    };
+    app.use(cors(corsOptions));
+    server = http.Server(app);    
+    break;
 
+  case 'production':
+    corsOptions = {
+      origin: 'https://dna.soyoungpark.me',
+      credentials : true
+    };
+    app.use(cors(corsOptions));
+    // Certificate
+    try {
+      const privateKey = fs.readFileSync('/etc/letsencrypt/live/dna.soyoungpark.me/privkey.pem', 'utf8');
+      const certificate = fs.readFileSync('/etc/letsencrypt/live/dna.soyoungpark.me/cert.pem', 'utf8');
+      const ca = fs.readFileSync('/etc/letsencrypt/live/dna.soyoungpark.me/chain.pem', 'utf8');
+
+      const credentials = {
+        key: privateKey,
+        cert: certificate,
+        ca: ca
+      };
+      
+      server = https.Server(credentials, app);
+    } catch (error) {
+      console.log(error);
+    }
+    break;
+
+  default:
+    return;
+}
+
+const socket = require('./utils/socket').init(server);
 server.listen(process.env.PORT, process.env.HOST, () => {
   console.info('[DNA-SocketApiServer] Listening on port %s at %s', 
   process.env.PORT, process.env.HOST);
 });
-
 
 module.exports = app;
 
