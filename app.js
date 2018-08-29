@@ -65,9 +65,9 @@ switch(process.env.NODE_ENV){
     app.use(cors(corsOptions));
     // Certificate
     try {
-      const privateKey = fs.readFileSync('/etc/letsencrypt/live/dna.soyoungpark.me/privkey.pem', 'utf8');
-      const certificate = fs.readFileSync('/etc/letsencrypt/live/dna.soyoungpark.me/cert.pem', 'utf8');
-      const ca = fs.readFileSync('/etc/letsencrypt/live/dna.soyoungpark.me/chain.pem', 'utf8');
+      const privateKey = fs.readFileSync('../SSL/privkey.pem', 'utf8');
+      const certificate = fs.readFileSync('../SSL/cert.pem', 'utf8');
+      const ca = fs.readFileSync('../SSL/chain.pem', 'utf8');
 
       const credentials = {
         key: privateKey,
