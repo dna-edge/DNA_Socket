@@ -15,7 +15,9 @@ exports.save = (dmData) => {
         reject(customErr);  
       } else {
         if (room.length > 0) {
-          resolve();
+          const receiver = (dmData.idx === room[0].users[0].idx) ? 
+            room[0].users[1].idx : room[0].users[0].idx;
+          resolve(receiver);
         } else { // 해당 idx의 room이 없다.
           const customErr = new Error("There is no chat room for that index.");
           reject(customErr);
@@ -23,7 +25,7 @@ exports.save = (dmData) => {
       }
     });
   })
-  .then(() => {
+  .then((receiver) => {
     // 2. model 생성하기
     return new Promise((resolve, reject) => {
       const dm = new mongo.dmModel(
@@ -39,12 +41,15 @@ exports.save = (dmData) => {
           const customErr = new Error("Error occrred while Save Direct Message: " + err);
           reject(customErr);        
         } else {
-          resolve(dm);
+          const next = {
+            dm, receiver
+          }
+          resolve(next);
         }
       });
     });
   })
-  .then((dm) => {
+  .then((next) => {
     return new Promise((resolve, reject) => {
       // 4. 해당 채팅방의 updated_at 변경하기
       mongo.roomModel.updated(dmData.roomIdx, dmData.contents, (err, result) => {
@@ -52,8 +57,8 @@ exports.save = (dmData) => {
           const customErr = new Error("Error occrred while Update Room's updated_at: " + err);
           reject(customErr);        
         } else {
-          dm.roomIdx = dmData.roomIdx;
-          resolve(dm);
+          next.dm.roomIdx = dmData.roomIdx;
+          resolve(next);
         }
       });
     });
@@ -64,9 +69,9 @@ exports.save = (dmData) => {
 
 /*******************
  *  SelectAll
- *  @param: roomIdx, page
+ *  @param: userIdx, roomIdx, page
  ********************/
-exports.selectAll = (roomIdx, page) => {
+exports.selectAll = (userIdx, roomIdx, page) => {
   return new Promise((resolve, reject) => { 
     // DB의 모델에서 바로 끌고 오면 된다.
     mongo.roomModel.selectOne(roomIdx, (err, room) => {
@@ -79,15 +84,24 @@ exports.selectAll = (roomIdx, page) => {
           if (!page) { // 페이지 인자가 없음 : 페이지네이션이 되지 않은 경우
             DMs = room[0].messages
           } else {     // 페이지 인자가 있음 : 페이지네이션 적용
-            let start = (paginationCount * (page));
+            let start = (paginationCount * (page - 1));
             if (start < 0) {
               start = 0;
             }            
-            let end = paginationCount * (page + 1);
+            let end = paginationCount * (page);
 
-            DMs = room[0].messages.slice(start, end);
-          }                
-          resolve(DMs);    
+            DMs = room[0].messages.reverse().slice(start, end);
+          }         
+
+          const avatar = (room[0].users[0].idx === userIdx) 
+            ? room[0].users[1].avatar : room[0].users[0].avatar;
+
+          const result = {
+            avatar,
+            DMs
+          };
+
+          resolve(result);    
         }
     });
   });

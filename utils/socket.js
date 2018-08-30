@@ -232,13 +232,6 @@ exports.init = (http) => {
      * DM 생성
     ********************/
 
-    socket.on('enter', (data) => {
-      console.log("a user entered");
-      const room = 'room' + data.roomIdx;
-      console.log("join : " + room);
-      socket.join(room);
-    });
-
     socket.on('save_dm', async (token, messageData) => {
       // 1. DB에 저장하기 위해 컨트롤러를 호출한다.
       let response = '';
@@ -249,11 +242,18 @@ exports.init = (http) => {
         console.log(err);
         response = errorCode[err];
       } finally {
-        // 3. 저장한 결과물을 해당 room 안에 있는 클라에게 쏜다!
-        const room = 'room' + response.result.roomIdx;
-
-        console.log("to send : " + room);
-        io.of('/').in(room).emit('new_dm', response);            
+        // 3. 결과물을 해당 유저와 나에게 쏴야 합니다.
+        // redis의 세션 목록에 해당 유저가 있는지 확인하고, 있으면 쏩니다.
+        redis.hgetall('info', (err, object) => {
+          if (err) console.log(err);
+          
+          const receiver = response.result.receiver;
+          if (object[receiver]) { // 해당 유저가 현재 접속중일 경우에만 보내고,
+            socket.broadcast.to(JSON.parse(object[receiver]).socket).emit('new_dm', response);
+          }
+          // 내 자신에게도 발송해줍니다!
+          socket.emit('new_dm', response);
+        });
       }
 
       // // 2. 레디스에 저장된 클라이언트의 리스트를 가져온다.

@@ -119,6 +119,7 @@ exports.selectCircle = (conditions, blocks, page) => {
           const customErr = new Error("Error occrred while selecting Messages: " + err);
           reject(customErr);        
         } else {
+          console.log(result);
           resolve(result);
         }
     });

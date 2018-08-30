@@ -31,8 +31,7 @@ exports.save = (token, param) => {
     return new Promise(async (resolve, reject) => {     
       /* PARAM */
       const idx = userData.idx;
-      const roomIdx = param.roomIdx;
-      const type = param.type;
+      const roomIdx = param.room_idx;
       const contents = param.contents;
       
       /* 1. 유효성 체크하기 */
@@ -123,7 +122,7 @@ exports.selectAll = async (req, res, next) => {
   // 2. DB에서 끌고 오기
   let result = '';
   try {
-    result = await dmModel.selectAll(roomIdx, page);
+    result = await dmModel.selectAll(userIdx, roomIdx, page);
   } catch (error) {
     // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
     return next(error);
