@@ -82,10 +82,12 @@ Schema.createSchema = (mongoose) => {
 
   // like : 좋아요 누르기, 취소하기
   messageSchema.static('like', function(userIdx, messageIdx, callback) {
+    console.log('like');
     this.findOneAndUpdate(
       { idx: parseInt(messageIdx) },
       { $push: { likes: userIdx },
         $inc: { like_count: 1} },
+      { new: true },
       callback
     );
   });
@@ -96,6 +98,7 @@ Schema.createSchema = (mongoose) => {
       { idx: parseInt(messageIdx) },
       { $pop: { likes: userIdx },
         $inc: { like_count: -1} },
+      { new: true },
       callback
     );
   });

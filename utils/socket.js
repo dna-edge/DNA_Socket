@@ -149,6 +149,7 @@ exports.init = (http) => {
           });
         });     
       } else if (type === "dm"){
+      // 친구 리스트를 받아와서 접속 중인 사람 중에서 추려서 돌려주면 됩니다.
 
       }
     });
@@ -176,10 +177,7 @@ exports.init = (http) => {
 
       // 2. 레디스에 저장된 클라이언트의 리스트를 가져옵니다.
       redis.hgetall('clients', (err, object) => {
-        if (err) {
-          console.log(err);
-        }
-        let count = 0;
+        if (err) console.log(err);
         
         Object.keys(object).forEach(function (key) { 
           // 3. 저장한 결과값을 연결된 소켓에 쏴주기 위해 필터링합니다.
@@ -190,10 +188,8 @@ exports.init = (http) => {
           );
           if (value.radius >= distance) { // 거리 값이 설정한 반경보다 작을 경우에만 이벤트를 보내줍니다.            
             socket.broadcast.to(key).emit('new_msg', response);
-            count++;
           }
         });
-        console.log("message sent to ["+count+"] client");
         socket.emit('new_msg', response);
       });   
 
@@ -227,6 +223,43 @@ exports.init = (http) => {
       }
     });
 
+    /*******************
+     * 좋아요 처리
+    ********************/
+
+    socket.on('like', async (token, idx) => {
+      // 1. DB에 저장하기 위해 컨트롤러를 호출한다.
+      let response = '';
+
+      try {
+        response = await messageCtrl.like(token, idx);
+      } catch (err) {
+        console.log(err);
+        response = errorCode[err];
+      } finally {
+        // 3. 결과물을 이 메시지를 받아보는 유저와 나에게 쏴야 합니다.
+        // 기존 메시지 수신 방식이랑 동일하게 하면 됩니다.
+        redis.hgetall('clients', (err, object) => {
+          if (err) console.log(err);
+
+          const messageLat = response.result.position.coordinates[1];
+          const messageLng = response.result.position.coordinates[0];
+          
+          Object.keys(object).forEach(function (key) { 
+            const value = JSON.parse(object[key]);
+            const distance = geolib.getDistance(
+              { latitude: value.position[1], longitude: value.position[0] }, // 소켓의 현재 위치 (순서 주의!)
+              { latitude: messageLat, longitude: messageLng }         // 메시지 발생 위치
+            );
+            if (value.radius >= distance) { // 거리 값이 설정한 반경보다 작을 경우에만 이벤트를 보내줍니다.            
+              socket.broadcast.to(key).emit('apply_like', response);
+            }
+          });
+          socket.emit('apply_like', response);
+        });   
+      }      
+    });
+
 
     /*******************
      * DM 생성
@@ -246,7 +279,6 @@ exports.init = (http) => {
         // redis의 세션 목록에 해당 유저가 있는지 확인하고, 있으면 쏩니다.
         redis.hgetall('info', (err, object) => {
           if (err) console.log(err);
-          
           const receiver = response.result.receiver;
           if (object[receiver]) { // 해당 유저가 현재 접속중일 경우에만 보내고,
             socket.broadcast.to(JSON.parse(object[receiver]).socket).emit('new_dm', response);
@@ -254,24 +286,8 @@ exports.init = (http) => {
           // 내 자신에게도 발송해줍니다!
           socket.emit('new_dm', response);
         });
-      }
-
-      // // 2. 레디스에 저장된 클라이언트의 리스트를 가져온다.
-      // const clients = redis.hgetall('clients', (err, result) => {
-      //   let count = 0;
-
-      //   Object.keys(result).forEach(function (key) { 
-      //     // 3. 저장한 결과물을 해당 room 안에 있는 클라에게 쏜다!
-      //     socket.on('save_dm', function(data) {
-      //       socket.in('room' + response.data.roomIdx).emit('new_dm', data.message);            
-      //     });
-      //   });
-      //   console.log("message sent to [room"+response.data.roomIdx+"] client");
-      //   socket.emit('new_msg', response);
-      // });   
-      
+      }      
     });
-
   });
 };
 

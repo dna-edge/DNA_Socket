@@ -119,7 +119,6 @@ exports.selectCircle = (conditions, blocks, page) => {
           const customErr = new Error("Error occrred while selecting Messages: " + err);
           reject(customErr);        
         } else {
-          console.log(result);
           resolve(result);
         }
     });
@@ -141,24 +140,19 @@ exports.like = (userIdx, messageIdx) => {
         reject(customErr);  
       } else {
         const result = message[0].likes.includes(userIdx);
-        
-        if (result) { // 존재하면 지우고
-          resolve(false)
-        } else {      // 없으면 추가한다!
-          resolve(true);
-        }
+        resolve(result);
       }      
     });
   })
-  .then((addition) => {
+  .then((exist) => {
     return new Promise((resolve, reject) => {
-      if (addition) { // 추가해야 한다.
+      if (!exist) { // 추가해야 한다.
         mongo.messageModel.like(userIdx, messageIdx, (err, result) => {
           if (err) {
             const customErr = new Error("Error occrred Push likes list: " + err);
             reject(customErr);  
           } else {
-            resolve(addition);    
+            resolve(result);    
           }
         });
       } else {        // 빼야 한다.
@@ -167,7 +161,7 @@ exports.like = (userIdx, messageIdx) => {
             const customErr = new Error("Error occrred Pop likes list: " + err);
             reject(customErr);  
           } else {
-            resolve(addition);    
+            resolve(result);    
           }
         });
       }
