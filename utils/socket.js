@@ -141,28 +141,28 @@ exports.init = (http) => {
                 }
                 else {
                   const json = JSON.parse(info[0]);
-                  if (!json) reject();
+                  if (json !== null) {
+                    // 일단 상대가 내 반경 안에 들어와 있다면, 나도 상대의 반경 안에 들어가 있는지도 체크합니다.
+                    const distance = geolib.getDistance(
+                      { latitude: position[1], longitude: position[0] }, // 내 위치 (순서 주의!)
+                      { latitude: json.position[1], longitude: json.position[0] }    // 상대의 위치
+                    );  
 
-                  // 일단 상대가 내 반경 안에 들어와 있다면, 나도 상대의 반경 안에 들어가 있는지도 체크합니다.
-                  const distance = geolib.getDistance(
-                    { latitude: position[1], longitude: position[0] }, // 내 위치 (순서 주의!)
-                    { latitude: json.position[1], longitude: json.position[0] }    // 상대의 위치
-                  );  
+                    let inside = false;  // 거리가 해당 유저의 반경보다 작은 경우는 참으로 바꿉니다.
+                    if (distance <= json.radius) inside = true;
+                    
+                    const result = {
+                      idx,
+                      nickname: json.nickname,
+                      avatar: json.avatar,
+                      inside
+                    };
+                    
+                    infoList.push(result);
 
-                  let inside = false;  // 거리가 해당 유저의 반경보다 작은 경우는 참으로 바꿉니다.
-                  if (distance <= json.radius) inside = true;
-                  
-                  const result = {
-                    idx,
-                    nickname: json.nickname,
-                    avatar: json.avatar,
-                    inside
-                  };
-                  
-                  infoList.push(result);
-
-                  if (i+1 === positions.length) {
-                    socket.emit("geo", infoList);
+                    if (i+1 === positions.length) {
+                      socket.emit("geo", infoList);
+                    }
                   }
                 }
               });           
