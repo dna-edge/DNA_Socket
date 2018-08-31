@@ -12,6 +12,9 @@ module.exports = (router) => {
   router.route('/messages/:page')          // Paged
     .post(authCtrl.auth, messageCtrl.selectCircle);
 
+  router.route('/best')
+    .post(authCtrl.auth, messageCtrl.best);
+
   /* 모든 메시지 리스트 조회 */
   // router.route('/messages')               // All
   //   .get(authCtrl.auth, messageCtrl.selectAll);

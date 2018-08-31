@@ -80,6 +80,22 @@ Schema.createSchema = (mongoose) => {
     }
   });
 
+  // selectBest : 베스트챗 조회하기
+  messageSchema.static('selectBest', function(conditions, callback) {
+    /* where 안에 들어가는 이름은 해당 컬럼의 이름임에 주의한다! */
+    return this.find({}, callback)
+      .where('position')
+      .within(
+        {
+          center : [parseFloat(conditions.lng), parseFloat(conditions.lat)],
+          radius : parseFloat(conditions.radius/6371000), // change radian: 1/6371 -> 1km
+          unique : true, spherical : true
+        }
+      )
+      .sort('-like_count').sort('-created_at')
+      .limit(3);      
+  });
+
   // like : 좋아요 누르기, 취소하기
   messageSchema.static('like', function(userIdx, messageIdx, callback) {
     console.log('like');

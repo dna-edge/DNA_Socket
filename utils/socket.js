@@ -40,6 +40,8 @@ const storeAll = (id, data) => {
 
   const info = {
     socket: id,
+    position: data.position,
+    radius: data.radius,
     nickname: data.nickname,
     avatar: data.avatar,
   };
@@ -54,12 +56,12 @@ exports.init = (http) => {
   /* TODO 테스트용으로 레디스 초기화 (추후 꼭 삭제) */
   storeClient("s1rzGthx73mJqJ5KAAAG", "{\"idx\": 101, \"position\":[127.197422,37.590531],\"radius\":500}");       
   storeClient("7WB-k5qboL6Ekp4TAAAH", "{\"idx\": 102, \"position\":[127.099696,37.592049],\"radius\":500}");       
-  storeClient("Ubw5zXKj-2xhMuYSAAAA", "{\"idx\": 103, \"position\":[127.097695,37.590571],\"radius\":500}");       
+  storeClient("Ubw5zXKj-2xhMuYSAAAA", "{\"idx\": 103, \"position\":[127.097695,37.590571],\"radius\":300}");       
   storeClient("UIZA0ogMyaXh5HyBAAAB", "{\"idx\": 104, \"position\":[127.097622,37.591479],\"radius\":500}");      
-  storeInfo(101, "{\"socket\":\"s1rzGthx73mJqJ5KAAAG\", \"nickname\":\"test1\", \"avatar\": \"null\"}");
-  storeInfo(102, "{\"socket\":\"7WB-k5qboL6Ekp4TAAAH\", \"nickname\":\"test2\", \"avatar\": \"null\"}");
-  storeInfo(103, "{\"socket\":\"Ubw5zXKj-2xhMuYSAAAA\", \"nickname\":\"test3\", \"avatar\": \"null\"}");
-  storeInfo(104, "{\"socket\":\"UIZA0ogMyaXh5HyBAAAB\", \"nickname\":\"test4\", \"avatar\": \"null\"}");  
+  storeInfo(101, "{\"socket\":\"s1rzGthx73mJqJ5KAAAG\", \"position\":[127.197422,37.590531],\"radius\":500, \"nickname\":\"test1\", \"avatar\": \"null\"}");
+  storeInfo(102, "{\"socket\":\"7WB-k5qboL6Ekp4TAAAH\", \"position\":[127.099696,37.592049],\"radius\":500, \"nickname\":\"test2\", \"avatar\": \"null\"}");
+  storeInfo(103, "{\"socket\":\"Ubw5zXKj-2xhMuYSAAAA\", \"position\":[127.097695,37.590571],\"radius\":300, \"nickname\":\"test3\", \"avatar\": \"null\"}");
+  storeInfo(104, "{\"socket\":\"UIZA0ogMyaXh5HyBAAAB\", \"position\":[127.097622,37.591479],\"radius\":500, \"nickname\":\"test4\", \"avatar\": \"null\"}");  
   storeGeoInfo(101, [127.197422,37.590531]);
   storeGeoInfo(102, [127.099696,37.592049]);
   storeGeoInfo(103, [127.097695,37.590571]);
@@ -107,6 +109,7 @@ exports.init = (http) => {
         await new Promise((resolve, reject) => {
           // nearby @param : {위도, 경도}, 반경
           // 현재 유저의 위치로부터 유저가 설정한 반경값 이내에 존재하는 접속자만 추려냅니다.
+          // + 기능 추가 : 주변에 접속중인 사람인지만 보여주지 말고, 그 유저도 내 메시지를 받아볼 수 있는지도 추가합니다.
           geo.nearby({latitude: position[1], longitude: position[0]}, data.radius, 
             (err, positions) => {
               if (err) {
@@ -117,34 +120,52 @@ exports.init = (http) => {
               }
             });
         })
+        // .then((positions) => {
+        // // 
+        //   redis.hmget('clients', data.idx, (err, info) => {
+        //     if(err) console.log(err);
+        //     console.log(info);
+        //   });
+        
+        // );
+        // })
         .then((positions) => {
           return new Promise((resolve, reject) => {
             let infoList = [];
-            positions.map(async (idx, i) => {
-              await new Promise((resolve, reject) => {
-                redis.hmget('info', idx, (err, info) => {
-                  if (err) {
-                    console.log(err);
-                    reject(err);
-                  }
-                  else {
-                    const json = JSON.parse(info[0]);
-                    if (!json) reject();
-                    
-                    const result = {
-                      idx,
-                      nickname: json.nickname,
-                      avatar: json.avatar
-                    };
-                    
-                    infoList.push(result);
 
-                    if (i+1 === positions.length) {
-                      socket.emit("geo", infoList);
-                    }
+            positions.map(async (idx, i) => {
+              redis.hmget('info', idx, (err, info) => {
+                if (err) {
+                  console.log(err);
+                  reject(err);
+                }
+                else {
+                  const json = JSON.parse(info[0]);
+                  if (!json) reject();
+
+                  // 일단 상대가 내 반경 안에 들어와 있다면, 나도 상대의 반경 안에 들어가 있는지도 체크합니다.
+                  const distance = geolib.getDistance(
+                    { latitude: position[1], longitude: position[0] }, // 내 위치 (순서 주의!)
+                    { latitude: json.position[1], longitude: json.position[0] }    // 상대의 위치
+                  );  
+
+                  let inside = false;  // 거리가 해당 유저의 반경보다 작은 경우는 참으로 바꿉니다.
+                  if (distance <= json.radius) inside = true;
+                  
+                  const result = {
+                    idx,
+                    nickname: json.nickname,
+                    avatar: json.avatar,
+                    inside
+                  };
+                  
+                  infoList.push(result);
+
+                  if (i+1 === positions.length) {
+                    socket.emit("geo", infoList);
                   }
-                });
-              });
+                }
+              });           
             });
           });
         });     

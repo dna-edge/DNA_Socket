@@ -308,3 +308,59 @@ exports.like = (token, messageIdx) => {
     });
   });
 };
+
+
+
+/*******************
+ *  Best
+ *  @param: lng, lat, radius
+ ********************/
+exports.best = async (req, res, next) => {
+  /* PARAM */
+  const idx = req.userData.idx;
+  const lng = req.body.lng || req.params.lng;
+  const lat = req.body.lat || req.params.lat;
+  const radius = req.body.radius || req.params.radius;
+  
+  /* 1. 유효성 체크하기 */
+  let isValid = true;
+
+  if (!lng || lng === '' || lng === undefined) {
+    isValid = false;
+    validationError.errors.lng = { message : "Longitude is required" };
+  }
+
+  if (!lat || lat === '' || lat === undefined) {
+    isValid = false;
+    validationError.errors.lat = { message : "Latitude is required" };
+  }
+
+  if (!radius || radius === '' || radius === undefined) {
+    isValid = false;
+    validationError.errors.radius = { message : "Radius is required" };
+  }
+
+  if (!isValid) return res.status(400).json(validationError);
+  /* 유효성 체크 끝 */
+
+  // 2. DB에서 끌고 오기
+  let result = '';
+  try {
+    const conditions = {
+      lng, lat, radius
+    };
+
+    result = await messageModel.best(conditions);
+  } catch (error) {
+    // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
+    return next(error);
+  }
+
+  // 3. 조회 성공
+  const respond = {
+    status: 200,
+    message : "Select Messages Successfully",
+    result
+  };
+  return res.status(200).json(respond);
+};

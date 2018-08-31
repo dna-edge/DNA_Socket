@@ -207,3 +207,23 @@ exports.dislike = (userIdx, roomIdx) => {
     });
   });
 }
+
+
+
+/*******************
+ *  Best
+ *  @param: conditions = {lng, lat, radius}
+ ********************/
+exports.best = (conditions) => {
+  return new Promise((resolve, reject) => {      
+    // DB의 모델에서 바로 끌고 오면 된다.
+    mongo.messageModel.selectBest(conditions, (err, result) => {
+        if (err) {
+          const customErr = new Error("Error occrred while selecting Best Messages: " + err);
+          reject(customErr);        
+        } else {
+          resolve(result);
+        }
+    });
+  });
+};
