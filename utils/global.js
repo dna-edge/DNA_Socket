@@ -87,12 +87,15 @@ connection.on('error', function(err) {
 const mongoose = require('mongoose');
 
 const url = `mongodb://${process.env.EC2_HOST}:${process.env.MONGO_PORT}/${process.env.DB_NAME}`;
+const testUrl = `mongodb://${process.env.EC2_HOST}:${process.env.MONGO_PORT}/test`;
+
 const options = {
   user: process.env.MONGO_USERNAME,
   pass: process.env.MONGO_PASSWORD,
   useNewUrlParser: true,
   promiseLibrary: global.Promise
 };
+
 mongoose.connect(url, options);
 
 const mongo = {};
@@ -104,6 +107,16 @@ mongo.db.once('open', function(){
 });
 mongo.db.on('disconnected', function(){
   console.log("... Disconnected to mongod server");
+});
+
+let testMongo = mongoose.createConnection(testUrl, options);
+
+// test에도 스키마와 모델 객체 생성해주기
+testMongo.once('open', function() {
+  console.log("*** Connected to mongod test server");
+  const testModel = testMongo.model("messageModel", 
+    require("../schemas/MessageSchema").createSchema(mongoose));
+  testMongo["messageModel"] = testModel;
 });
 
 // config에 정의한 스키마 및 모델 객체 생성
@@ -130,3 +143,4 @@ function createSchema(config){
 module.exports.mysql = connection;
 module.exports.redis = redis;
 module.exports.mongo = mongo;
+module.exports.testMongo = testMongo;

@@ -1,14 +1,22 @@
 const mongo = global.utils.mongo;
+const testMongo = global.utils.testMongo;
+
 const helpers = require('../utils/helpers');
 
 /*******************
  *  Save
- *  @param: messageData = {idx, nickname, avatar, lat, lon, contents}
+ *  @param: messageData = {idx, nickname, avatar, lat, lon, contents, testing}
  ********************/
 exports.save = (messageData) => {
+  let db = mongo;
+  if (messageData.testing) { // 테스트 환경일 경우엔 DB을 테스트용으로 바꾼다.
+    db = testMongo;
+    console.log("... test data is saved");
+  }
+
   // 1. idx 최대값 구하기 
   return new Promise((resolve, reject) => { 
-    mongo.messageModel.count((err, result) => {
+    db.messageModel.count((err, result) => {
       if (err) {
         const customErr = new Error("Error occrred while Counting Messages: " + err);
         reject(customErr);        
@@ -26,7 +34,7 @@ exports.save = (messageData) => {
         idx = count[0].idx + 1;
       }
       
-      const message = new mongo.messageModel(
+      const message = new db.messageModel(
         {
           idx,
           user: {
@@ -56,7 +64,7 @@ exports.save = (messageData) => {
   })
   .then((idx) => {
     return new Promise((resolve, reject) => {   
-      mongo.messageModel.selectOne(idx, (err, result) => {
+      db.messageModel.selectOne(idx, (err, result) => {
         if (err) {
           const customErr = new Error("Error occrred while selecting All Messages: " + err);
           reject(customErr);        

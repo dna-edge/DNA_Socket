@@ -1,0 +1,26 @@
+config:
+  target: "http://localhost:9013"
+  socketio:
+    transports: ["websocket"]
+  phases:
+    - duration: 30
+      arrivalRate: 300
+      
+  
+scenarios:
+  - engine: "socketio"
+    flow:
+      - emit:
+          channel: "save_msg"
+          data: { 
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZHgiOjMsImlkIjoiMzQ1N3Nvc28iLCJuaWNrbmFtZSI6InNveW91bmciLCJhdmF0YXIiOiJodHRwczovL2VuY3J5cHRlZC10Ym4wLmdzdGF0aWMuY29tL2ltYWdlcz9xPXRibjpBTmQ5R2NROGpETVMxTW5jSmc2LVBkUVI1Z3pwVGloZDRxa0w5dWZETkExMzN6UTN0R2FLVzAyWCIsImlhdCI6MTUzNTgyOTU4MywiZXhwIjoxNTM1ODcyNzgzfQ.Va1zlCGwGDTJi2jo-_A8wdymzgKhMUnmI88mPuWefto", 
+            "messageData": {
+              "lng": 127.10122290000001,
+              "lat": 37.5899388,
+              "contents": "testing",
+              "type": "LoudSpeaker"
+            },
+            "radius": 500,
+            "testing": true
+          }
+      - think: 1

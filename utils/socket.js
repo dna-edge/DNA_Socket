@@ -182,9 +182,13 @@ exports.init = (http) => {
     ********************/
 
     // 새로 메시지를 생성했을 경우에는
-    socket.on('save_msg', async (token, messageData, radius) => {
+    socket.on('save_msg', async (data) => {
       // 1. DB에 저장하기 위해 컨트롤러를 호출합니다.
       let response = '';  
+      const token = data.token;
+      const messageData = data.messageData;
+      messageData.testing = data.testing;
+      const radius = data.radius;
 
       try {
         response = await messageCtrl.save(token, messageData);
