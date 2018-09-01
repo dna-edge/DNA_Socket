@@ -21,7 +21,6 @@ require('dotenv').config();
 global.utils = require('./utils/global');
 require('./routes')(app);
 
-
 /* Error Handler*/
 process.stdin.resume(); //so the program will not close instantly
 

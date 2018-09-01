@@ -52,7 +52,7 @@ exports.save = (token, param) => {
         validationError.errors.lat = { message : "Latitude is required" };
       }
 
-      if (!contents || validator.isEmpty(contents)) {
+      if (!contents || contents === null || contents === undefined) {
         isValid = false;
         validationError.errors.contents = { message : "Contents is required" };
       }      
@@ -62,7 +62,7 @@ exports.save = (token, param) => {
 
       let response = '';
 
-      if (type === 'LoudSpeaker') { // 확성기일 경우 해당 유저의 잔여 point를 조회한다.
+      if (type === "LoudSpeaker") { // 확성기일 경우 해당 유저의 잔여 point를 조회한다.
         let points = 0;
 
         try {
@@ -80,6 +80,14 @@ exports.save = (token, param) => {
           };
           reject();
         }
+      } else if (type === "Image") {
+        console.log(contents);
+
+        // const response = helpers.uploadSingle(contents);
+        // console.log(response);
+        // contents = "이미지 도전중";
+
+        // 이미지일 경우에는 DB에 파일의 경로만 저장해야 합니다.
       }
 
       // 3. DB에 저장하기

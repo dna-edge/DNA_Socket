@@ -4,7 +4,7 @@ const helpers = require('../utils/helpers');
 
 /*******************
  *  Save
- *  @param: dmData = {idx, roomIdx, contents}
+ *  @param: dmData = {idx, roomIdx, contents, type}
  ********************/
 exports.save = (dmData) => {
   // 1. roomIdx 값으로 room 값 찾아오기 (없으면 전송 불가)
@@ -32,6 +32,7 @@ exports.save = (dmData) => {
         {
           sender_idx: dmData.idx,
           contents: dmData.contents,
+          type: dmData.type,
           created_at: helpers.getCurrentDate()
         }
       );
@@ -52,7 +53,12 @@ exports.save = (dmData) => {
   .then((next) => {
     return new Promise((resolve, reject) => {
       // 4. 해당 채팅방의 updated_at 변경하기
-      mongo.roomModel.updated(dmData.roomIdx, dmData.contents, (err, result) => {
+      const data = {
+        contents: dmData.contents,
+        type: dmData.type
+      };
+
+      mongo.roomModel.updated(dmData.roomIdx, data, (err, result) => {
         if (err) {
           const customErr = new Error("Error occrred while Update Room's updated_at: " + err);
           reject(customErr);        

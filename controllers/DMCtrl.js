@@ -33,6 +33,7 @@ exports.save = (token, param) => {
       const idx = userData.idx;
       const roomIdx = param.room_idx;
       const contents = param.contents;
+      const type = param.type || "Message";
       
       /* 1. 유효성 체크하기 */
       let isValid = true;
@@ -58,7 +59,7 @@ exports.save = (token, param) => {
       let result = '';
       try {
         const dmData = {
-          idx, roomIdx, contents
+          idx, roomIdx, contents, type
         };
 
         if (isValid) result = await dmModel.save(dmData);
