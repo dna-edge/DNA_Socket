@@ -19,7 +19,7 @@ module.exports = {
       modelName: 'roomModel'
     }
   ],
-  pagination_count: 30,
+  pagination_count: 20,
   ping_interval: 2000,
   ping_timeout: 5000
 }

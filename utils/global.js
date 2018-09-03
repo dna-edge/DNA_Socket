@@ -83,6 +83,11 @@ connection.on('error', function(err) {
   }
 });
 
+setInterval(function () {
+  connection.query('SELECT 1');
+}, 5000);
+
+
 /* mongodb */
 const mongoose = require('mongoose');
 
@@ -93,7 +98,9 @@ const options = {
   user: process.env.MONGO_USERNAME,
   pass: process.env.MONGO_PASSWORD,
   useNewUrlParser: true,
-  promiseLibrary: global.Promise
+  promiseLibrary: global.Promise,
+  server: { socketOptions: { keepAlive: 1, connectTimeoutMS: 30000 } },
+  replset: { socketOptions: { keepAlive: 1, connectTimeoutMS: 30000 } }
 };
 
 mongoose.connect(url, options);
