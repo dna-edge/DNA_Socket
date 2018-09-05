@@ -83,7 +83,7 @@ Schema.createSchema = (mongoose) => {
   // selectBest : 베스트챗 조회하기
   messageSchema.static('selectBest', function(conditions, callback) {
     /* where 안에 들어가는 이름은 해당 컬럼의 이름임에 주의한다! */
-    return this.find({}, callback)
+    return this.find({ 'like_count': { $gt: 0}}, callback)
       .where('position')
       .within(
         {
@@ -98,7 +98,6 @@ Schema.createSchema = (mongoose) => {
 
   // like : 좋아요 누르기, 취소하기
   messageSchema.static('like', function(userIdx, messageIdx, callback) {
-    console.log('like');
     this.findOneAndUpdate(
       { idx: parseInt(messageIdx) },
       { $push: { likes: userIdx },

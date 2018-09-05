@@ -71,8 +71,6 @@ exports.init = (http) => {
     {'pingInterval': config.ping_interval, 'pingTimeout': config.ping_timeout});
   
   io.on('connection', (socket) => {
-    console.log('a user connected');   
-
     /*******************
      * 소켓 연결
     ********************/
@@ -83,7 +81,6 @@ exports.init = (http) => {
 
     // 클라의 연결이 종료되었을 경우 레디스에서 해당 정보를 삭제합니다.
     socket.on('disconnect', function (data) {
-      console.log('user disconnected');
       redis.hmget('clients', socket.id, (err, info) => {
         if (err) console.log(err);
         if (info && info[0]) {
@@ -234,12 +231,12 @@ exports.init = (http) => {
               }
             });
         })
-        .then((positions) => {                               
+        .then((positions) => {
           positions.map(async (idx, i) => {
             redis.hmget('info', idx, (err, info) => {
               if (err)  console.log(err);
               else {
-                const json = JSON.parse(info[0]);                
+                const json = JSON.parse(info[0]);
                 socket.to(json.socket).emit("speaker", response.result);
               }
             });
