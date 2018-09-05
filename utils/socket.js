@@ -231,12 +231,12 @@ exports.init = (http) => {
               }
             });
         })
-        .then((positions) => {                               
+        .then((positions) => {
           positions.map(async (idx, i) => {
             redis.hmget('info', idx, (err, info) => {
               if (err)  console.log(err);
               else {
-                const json = JSON.parse(info[0]);                
+                const json = JSON.parse(info[0]);
                 socket.to(json.socket).emit("speaker", response.result);
               }
             });
