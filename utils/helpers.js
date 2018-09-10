@@ -16,7 +16,7 @@ const S3 = new AWS.S3();
 const upload = multer({
   storage: multerS3({
     s3: S3,
-    bucket: 'dna-edge/images',
+    bucket: 'dna-edge/',
     acl: 'public-read',
     key: function (req, file, callback) {
       const fname = Date.now() + '_' + file.originalname;
