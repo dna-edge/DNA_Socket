@@ -8,6 +8,7 @@
     "deploy": "NODE_ENV=production node ./app"
   },
   "dependencies": {
+    "amqplib": "^0.5.2",
     "aws-sdk": "^2.307.0",
     "body-parser": "~1.18.2",
     "cookie-parser": "~1.4.3",

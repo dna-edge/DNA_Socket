@@ -1,4 +1,5 @@
 const redis = global.utils.redis;
+const rabbitMQ = global.utils.rabbitMQ;
 
 const geolib = require('geolib');
 var geo = require('georedis').initialize(redis);
@@ -217,6 +218,7 @@ exports.init = (http) => {
 
       // 4. 해당 메시지가 확성기 타입일 경우에는 푸시 메시지도 보내줘야 합니다.
       if (messageData.type === "LoudSpeaker") {
+        rabbitMQ.channel.publish("push", "speaker", new Buffer(JSON.stringify(response)));
         // 5. 푸시 메시지를 보내줄 대상을 선별해줘야 합니다.        
         await new Promise((resolve, reject) => {
           // nearby @param : {위도, 경도}, 반경

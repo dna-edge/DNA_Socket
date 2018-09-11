@@ -147,7 +147,22 @@ function createSchema(config){
   }
 };
 
+/* RabbitMQ */
+const rabbitMQ = require('amqplib/callback_api');
+rabbitMQ.channel = '';
+
+rabbitMQ.connect('amqp://localhost', function(err, conn) {
+  conn.createChannel(function(err, ch) {
+    rabbitMQ.channel = ch;
+
+    const ex = 'push';
+    ch.assertExchange(ex, 'direct', {durable: false});
+      // direct 타입이 아니라 topic 타입으로 exchange를 생성한다.
+  });
+});
+
 module.exports.mysql = connection;
 module.exports.redis = redis;
 module.exports.mongo = mongo;
 module.exports.testMongo = testMongo;
+module.exports.rabbitMQ = rabbitMQ;

@@ -15,7 +15,6 @@ app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
 
 require('dotenv').config();
 global.utils = require('./utils/global');
@@ -84,18 +83,10 @@ switch(process.env.NODE_ENV){
     return;
 }
 
-const socket = require('./utils/socket').init(server);
+require('./utils/socket').init(server);
 server.listen(process.env.PORT, process.env.HOST, () => {
   console.info('[DNA-SocketApiServer] Listening on port %s at %s', 
   process.env.PORT, process.env.HOST);
 });
 
 module.exports = app;
-
-// app.get('/message', function(req, res){
-//   res.sendFile(__dirname + '/test_message.html');
-// });
-
-// app.get('/dm', function(req, res){
-//   res.sendFile(__dirname + '/test_dm.html');
-// });
