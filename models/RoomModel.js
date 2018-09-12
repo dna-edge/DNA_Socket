@@ -44,6 +44,10 @@ exports.open = (roomData) => {
         
         if (count[0]) {
           idx = count[0].idx + 1;
+
+          if (idx === 0) {
+            idx = 1;
+          }
         }
 
         const room = new mongo.roomModel(
