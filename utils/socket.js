@@ -33,12 +33,7 @@ const storeGeoInfo = (idx, position) => {
 
 const storeAll = (id, data) => {
   const idx = data.idx;
-  const client = {
-    idx,
-    position: data.position,
-    radius: data.radius
-  };
-
+  
   const info = {
     socket: id,
     position: data.position,
@@ -48,17 +43,17 @@ const storeAll = (id, data) => {
   };
 
   if(idx && idx !== undefined){
-    storeClient(id, JSON.stringify(client));
+    storeClient(id, idx);
     storeInfo(idx, JSON.stringify(info));
     storeGeoInfo(idx, data.position);
   }      
 }
 exports.init = (http) => {
   /* TODO 테스트용으로 레디스 초기화 (추후 꼭 삭제) */
-  storeClient("s1rzGthx73mJqJ5KAAAG", "{\"idx\": 101, \"position\":[127.197422,37.590531],\"radius\":500}");       
-  storeClient("7WB-k5qboL6Ekp4TAAAH", "{\"idx\": 102, \"position\":[127.099696,37.592049],\"radius\":500}");       
-  storeClient("Ubw5zXKj-2xhMuYSAAAA", "{\"idx\": 103, \"position\":[127.097695,37.590571],\"radius\":300}");       
-  storeClient("UIZA0ogMyaXh5HyBAAAB", "{\"idx\": 104, \"position\":[127.097622,37.591479],\"radius\":500}");      
+  storeClient("s1rzGthx73mJqJ5KAAAG", 101);       
+  storeClient("7WB-k5qboL6Ekp4TAAAH", 102);       
+  storeClient("Ubw5zXKj-2xhMuYSAAAA", 103);       
+  storeClient("UIZA0ogMyaXh5HyBAAAB", 104);      
   storeInfo(101, "{\"socket\":\"s1rzGthx73mJqJ5KAAAG\", \"position\":[127.197422,37.590531],\"radius\":500, \"nickname\":\"test1\", \"avatar\": \"null\"}");
   storeInfo(102, "{\"socket\":\"7WB-k5qboL6Ekp4TAAAH\", \"position\":[127.099696,37.592049],\"radius\":500, \"nickname\":\"test2\", \"avatar\": \"null\"}");
   storeInfo(103, "{\"socket\":\"Ubw5zXKj-2xhMuYSAAAA\", \"position\":[127.097695,37.590571],\"radius\":300, \"nickname\":\"test3\", \"avatar\": \"null\"}");
@@ -82,10 +77,9 @@ exports.init = (http) => {
 
     // 클라의 연결이 종료되었을 경우 레디스에서 해당 정보를 삭제합니다.
     socket.on('disconnect', function (data) {
-      redis.hmget('clients', socket.id, (err, info) => {
+      redis.hmget('clients', socket.id, (err, idx) => {
         if (err) console.log(err);
-        if (info && info[0]) {
-          const idx = JSON.parse(info[0]).idx;        
+        if (idx) {  
           redis.hdel('info', idx);
           redis.zrem('geo:locations', idx);
         }
@@ -204,14 +198,22 @@ exports.init = (http) => {
         
         Object.keys(object).forEach(function (key) { 
           // 3. 저장한 결과값을 연결된 소켓에 쏴주기 위해 필터링합니다.
-          const value = JSON.parse(object[key]);
-          const distance = geolib.getDistance(
-            { latitude: value.position[1], longitude: value.position[0] }, // 소켓의 현재 위치 (순서 주의!)
-            { latitude: messageLat, longitude: messageLng }         // 메시지 발생 위치
-          );
-          if (value.radius >= distance) { // 거리 값이 설정한 반경보다 작을 경우에만 이벤트를 보내줍니다.            
-            socket.broadcast.to(key).emit('new_msg', response);
-          }
+          const idx = object[key];
+          redis.hmget("info", idx, (err, result) => {
+            // 4. 먼저 해당 유저의 정보를 info 키 내부에 있는 값으로 가져옵니다.
+            if (err) console.log(err);
+
+            if (result.length > 0) {
+              const value = JSON.parse(result[0]);
+              const distance = geolib.getDistance(
+                { latitude: value.position[1], longitude: value.position[0] }, // 소켓의 현재 위치 (순서 주의!)
+                { latitude: messageLat, longitude: messageLng }         // 메시지 발생 위치
+              );
+              if (value.radius >= distance) { // 거리 값이 설정한 반경보다 작을 경우에만 이벤트를 보내줍니다.            
+                socket.broadcast.to(key).emit('new_msg', response);
+              }
+            }
+          });
         });
         socket.emit('new_msg', response);
       });   
@@ -269,15 +271,23 @@ exports.init = (http) => {
           const messageLat = response.result.position.coordinates[1];
           const messageLng = response.result.position.coordinates[0];
           
-          Object.keys(object).forEach(function (key) { 
-            const value = JSON.parse(object[key]);
-            const distance = geolib.getDistance(
-              { latitude: value.position[1], longitude: value.position[0] }, // 소켓의 현재 위치 (순서 주의!)
-              { latitude: messageLat, longitude: messageLng }         // 메시지 발생 위치
-            );
-            if (value.radius >= distance) { // 거리 값이 설정한 반경보다 작을 경우에만 이벤트를 보내줍니다.            
-              socket.broadcast.to(key).emit('apply_like', response);
-            }
+          Object.keys(object).forEach(function (key) {
+            const idx = object[key];
+            redis.hmget("info", idx, (err, result) => {
+              // 4. 먼저 해당 유저의 정보를 info 키 내부에 있는 값으로 가져옵니다.
+              if (err) console.log(err);
+
+              if (result.length > 0) {
+                const value = JSON.parse(result[0]);
+                const distance = geolib.getDistance(
+                  { latitude: value.position[1], longitude: value.position[0] }, // 소켓의 현재 위치 (순서 주의!)
+                  { latitude: messageLat, longitude: messageLng }         // 메시지 발생 위치
+                );
+                if (value.radius >= distance) { // 거리 값이 설정한 반경보다 작을 경우에만 이벤트를 보내줍니다.            
+                  socket.broadcast.to(key).emit('apply_like', response);
+                }
+              }
+            });
           });
           socket.emit('apply_like', response);
         });   
