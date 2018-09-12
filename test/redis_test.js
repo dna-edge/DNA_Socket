@@ -54,7 +54,7 @@ async.waterfall([
         nickname,
         avatar: null
       }
-      
+      console.log("Dummy data is added : " + i);
       storeFunction(socket, testData);    
     }   
 
@@ -73,7 +73,8 @@ async.waterfall([
         nickname,
         avatar: null
       }
-      
+
+      console.log("Dummy data is added : " + (i+outboundCount));
       storeFunction(socket, testData);    
     }          
   }

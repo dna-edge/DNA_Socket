@@ -5,8 +5,8 @@ config:
   socketio:                           # socket.io로 테스트한다는 뜻
     transports: ["websocket"]
   phases:                             # 해당 기간 동안 몇 명의 가상 유저가 생성되는지
-    - duration: 30                    # 테스트가 진행되는 시간 (초 단위)
-      arrivalRate: 10                # 매 초 생성되는 가상 유저의 수
+    - duration: 10                    # 테스트가 진행되는 시간 (초 단위)
+      arrivalRate: 1000               # 매 초 생성되는 가상 유저의 수
         
 scenarios:
   - engine: "socketio"

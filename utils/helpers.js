@@ -69,7 +69,6 @@ exports.getCurrentDate = () => {
 
 exports.randomGeoLocation = (minLng, minLat) => {
   let lng, lat;
-  console.log("minLng : " +minLng + ", minLat : " + minLat);
 
   if (minLng && minLat) {
     lng = Math.random()*0.1 + minLng;
@@ -79,7 +78,7 @@ exports.randomGeoLocation = (minLng, minLat) => {
     lng = Math.random() * (131.52 - 125.04) + 125.04;
   }
   
-  return [lng, lat];  
+  return [(lng).toFixed(5), lat.toFixed(5)];  
 };
 
 exports.randomNumber = (min, max) => {
@@ -88,7 +87,11 @@ exports.randomNumber = (min, max) => {
 
 exports.randomString = (minLength, maxLength) => {
   const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  const length = Math.floor(Math.random() * maxLength) + minLength;
+  let length;
+  minLength === maxLength 
+  ? length = maxLength
+  : length = Math.floor(Math.random() * maxLength) + minLength;
+  
   let text = '';
   
   for (var i = 0; i < length; i++)

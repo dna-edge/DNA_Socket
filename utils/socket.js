@@ -1,5 +1,6 @@
 const redis = global.utils.redis;
 const rabbitMQ = global.utils.rabbitMQ;
+const logger = global.utils.logger;
 
 const geolib = require('geolib');
 var geo = require('georedis').initialize(redis);
@@ -67,7 +68,7 @@ exports.storeAll = (id, data) => {
 */
 const findUserInBound = (socket, response, event) => {
   redis.hgetall('clients', (err, object) => {
-    if (err) console.log(err);
+    if (err) logger.log("error", "Error: websocket error", error);
     if (!object || object === null) return;
 
     const messageLat = response.result.position.coordinates[1];
@@ -77,7 +78,7 @@ const findUserInBound = (socket, response, event) => {
       const idx = object[key];
       redis.hmget("info", idx, (err, result) => {
         // 먼저 해당 유저의 정보를 info 키 내부에 있는 값으로 가져옵니다.
-        if (err) console.log(err);
+        if (err) logger.log("error", "Error: websocket error", error);
 
         if (result.length > 0) {
           const value = JSON.parse(result[0]);
@@ -105,6 +106,17 @@ exports.init = (http) => {
   
   io.on('connection', (socket) => {
     /*******************
+     * 소켓 에러 로그
+    ********************/
+    socket.on('error', (error) => {
+      logger.log("error", "Error: websocket error", error);
+    }).on('connect_error', (error) => {
+      logger.log("error", "Error: websocket error", error);
+    }).on('reconnect_error', (error) => {
+      logger.log("error", "Error: websocket error", error);
+    });
+
+    /*******************
      * 소켓 연결
     ********************/
     // 클라에서 보내온 정보를 레디스에 저장합니다.
@@ -117,7 +129,7 @@ exports.init = (http) => {
       redis.hmget('clients', socket.id, (err, result) => {
         const idx = result[0];
         
-        if (err) console.log(err);
+        if (err) logger.log("error", "Error: websocket error", error);
         if (idx && idx !== null) {
           redis.hdel('info', idx);
           redis.zrem('geo:locations', idx);
@@ -144,7 +156,7 @@ exports.init = (http) => {
           geo.nearby({latitude: position[1], longitude: position[0]}, data.radius, 
             (err, positions) => {
               if (err) {
-                console.log(err);
+                logger.log("error", "Error: websocket error", error);
                 reject(err);
               } else {
                 resolve(positions);
@@ -158,7 +170,7 @@ exports.init = (http) => {
             positions.map(async (idx, i) => {
               redis.hmget('info', idx, (err, info) => {
                 if (err) {
-                  console.log(err);
+                  logger.log("error", "Error: websocket error", error);
                   reject(err);
                 }
                 else {
@@ -215,7 +227,7 @@ exports.init = (http) => {
       try {
         response = await messageCtrl.save(token, messageData);
       } catch (err) {
-        console.log(err);
+        logger.log("error", "Error: websocket error", error);
         response = errorCode[err];
       }
 
@@ -234,7 +246,7 @@ exports.init = (http) => {
           geo.nearby({latitude: messageLat, longitude: messageLng}, radius, 
             (err, positions) => {
               if (err) {
-                console.log(err);
+                logger.log("error", "Error: websocket error", error);
                 reject(err);
               } else {
                 resolve(positions);
@@ -244,7 +256,10 @@ exports.init = (http) => {
         .then((positions) => {
           positions.map(async (idx, i) => {
             redis.hmget('info', idx, (err, info) => {
-              if (err)  console.log(err);
+              if (err) {
+                console.log(err);
+                logger.log("error", "Error: websocket error", error);
+              }
               else {
                 const json = JSON.parse(info[0]);
                 socket.to(json.socket).emit("speaker", response.result);
@@ -266,7 +281,7 @@ exports.init = (http) => {
       try {
         response = await messageCtrl.like(token, idx);
       } catch (err) {
-        console.log(err);
+        logger.log("error", "Error: websocket error", error);
         response = errorCode[err];
       } finally {
         // 3. 결과물을 이 메시지를 받아보는 유저와 나에게 쏴야 합니다.
@@ -287,7 +302,7 @@ exports.init = (http) => {
       try {
         response = await dmCtrl.save(token, messageData);
       } catch (err) {
-        console.log(err);
+        logger.log("error", "Error: websocket error", error);
         response = errorCode[err];
       } finally {
         // 3. 결과물을 해당 유저와 나에게 쏴야 합니다.
