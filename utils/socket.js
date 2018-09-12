@@ -31,7 +31,17 @@ const storeGeoInfo = (idx, position) => {
 // This command overwrites any specified fields already existing in the hash.
 // If key does not exist, a new key holding a hash is created.      
 
-const storeAll = (id, data) => {
+/* 
+  레디스에 전달 받은 유저 정보를 저장하는 함수입니다.
+  @param id       : 저장할 유저의 idx
+  @param data     : 저장할 내용을 담은 JSON 오브젝트
+         socket   : 해당 유저가 현재 물고 있는 소켓의 아이디
+         position : 유저의 현재 위치
+         radius   : 유저가 설정한 반경 값
+         nickname : 유저의 닉네임
+         avatar   : 유저의 프로필 이미지 주소
+*/
+exports.storeAll = (id, data) => {
   const idx = data.idx;
   
   const info = {
@@ -48,21 +58,45 @@ const storeAll = (id, data) => {
     storeGeoInfo(idx, data.position);
   }      
 }
-exports.init = (http) => {
-  /* TODO 테스트용으로 레디스 초기화 (추후 꼭 삭제) */
-  storeClient("s1rzGthx73mJqJ5KAAAG", 101);       
-  storeClient("7WB-k5qboL6Ekp4TAAAH", 102);       
-  storeClient("Ubw5zXKj-2xhMuYSAAAA", 103);       
-  storeClient("UIZA0ogMyaXh5HyBAAAB", 104);      
-  storeInfo(101, "{\"socket\":\"s1rzGthx73mJqJ5KAAAG\", \"position\":[127.197422,37.590531],\"radius\":500, \"nickname\":\"test1\", \"avatar\": \"null\"}");
-  storeInfo(102, "{\"socket\":\"7WB-k5qboL6Ekp4TAAAH\", \"position\":[127.099696,37.592049],\"radius\":500, \"nickname\":\"test2\", \"avatar\": \"null\"}");
-  storeInfo(103, "{\"socket\":\"Ubw5zXKj-2xhMuYSAAAA\", \"position\":[127.097695,37.590571],\"radius\":300, \"nickname\":\"test3\", \"avatar\": \"null\"}");
-  storeInfo(104, "{\"socket\":\"UIZA0ogMyaXh5HyBAAAB\", \"position\":[127.097622,37.591479],\"radius\":500, \"nickname\":\"test4\", \"avatar\": \"null\"}");  
-  storeGeoInfo(101, [127.197422,37.590531]);
-  storeGeoInfo(102, [127.099696,37.592049]);
-  storeGeoInfo(103, [127.097695,37.590571]);
-  storeGeoInfo(104, [127.097622,37.591479]);
 
+/* 
+  해당 메시지의 좌표 값을 통해 해당 메시지를 받아볼 유저들을 추려내는 함수입니다.
+  @param socket   : 연결한 소켓 자체
+  @param response : 메시지의 내용
+  @param event    : 클라리언트로 emit할 이벤트 이름
+*/
+const findUserInBound = (socket, response, event) => {
+  redis.hgetall('clients', (err, object) => {
+    if (err) console.log(err);
+
+    const messageLat = response.result.position.coordinates[1];
+    const messageLng = response.result.position.coordinates[0];
+    
+    Object.keys(object).forEach(function (key) {
+      const idx = object[key];
+      redis.hmget("info", idx, (err, result) => {
+        // 먼저 해당 유저의 정보를 info 키 내부에 있는 값으로 가져옵니다.
+        if (err) console.log(err);
+
+        if (result.length > 0) {
+          const value = JSON.parse(result[0]);
+          const distance = geolib.getDistance(
+            { latitude: value.position[1], longitude: value.position[0] }, // 소켓의 현재 위치 (순서 주의!)
+            { latitude: messageLat, longitude: messageLng }                // 메시지 발생 위치
+          );
+          if (value.radius >= distance) { 
+            // 거리 값이 설정한 반경보다 작을 경우에만 이벤트를 보내줍니다.            
+            socket.broadcast.to(key).emit(event, response);
+          }
+        }
+      });
+    });
+    socket.emit(event, response);
+  });   
+};
+
+
+exports.init = (http) => {
   const io = require('socket.io')(http, 
     {'pingInterval': config.ping_interval, 'pingTimeout': config.ping_timeout});
   
@@ -72,11 +106,11 @@ exports.init = (http) => {
     ********************/
     // 클라에서 보내온 정보를 레디스에 저장합니다.
     socket.on('store', (data) => {
-      storeAll(socket.id, data);
+      this.storeAll(socket.id, data);
     });
 
     // 클라의 연결이 종료되었을 경우 레디스에서 해당 정보를 삭제합니다.
-    socket.on('disconnect', function (data) {
+    socket.on('disconnect', () => {
       redis.hmget('clients', socket.id, (err, idx) => {
         if (err) console.log(err);
         if (idx) {  
@@ -89,7 +123,7 @@ exports.init = (http) => {
 
     // 클라가 주기적으로 현재 위치를 업데이트하면 이를 레디스에서 갱신합니다.
     socket.on('update', async (type, data) => {      
-      storeAll(socket.id, data);
+      this.storeAll(socket.id, data);
 
       // 해당 위치와 radius에 맞는 접속자와 접속중인 친구들을 찾아 보내줍니다.
       // 유저에게 type을 받아서, 이에 맞는 정보를 찾아서 보내주면 됩니다.
@@ -112,15 +146,6 @@ exports.init = (http) => {
               }
             });
         })
-        // .then((positions) => {
-        // // 
-        //   redis.hmget('clients', data.idx, (err, info) => {
-        //     if(err) console.log(err);
-        //     console.log(info);
-        //   });
-        
-        // );
-        // })
         .then((positions) => {
           return new Promise((resolve, reject) => {
             let infoList = [];
@@ -192,31 +217,7 @@ exports.init = (http) => {
       const messageLat = response.result.position.coordinates[1];
       const messageLng = response.result.position.coordinates[0];
 
-      // 2. 레디스에 저장된 클라이언트의 리스트를 가져옵니다.
-      redis.hgetall('clients', (err, object) => {
-        if (err) console.log(err);
-        
-        Object.keys(object).forEach(function (key) { 
-          // 3. 저장한 결과값을 연결된 소켓에 쏴주기 위해 필터링합니다.
-          const idx = object[key];
-          redis.hmget("info", idx, (err, result) => {
-            // 4. 먼저 해당 유저의 정보를 info 키 내부에 있는 값으로 가져옵니다.
-            if (err) console.log(err);
-
-            if (result.length > 0) {
-              const value = JSON.parse(result[0]);
-              const distance = geolib.getDistance(
-                { latitude: value.position[1], longitude: value.position[0] }, // 소켓의 현재 위치 (순서 주의!)
-                { latitude: messageLat, longitude: messageLng }         // 메시지 발생 위치
-              );
-              if (value.radius >= distance) { // 거리 값이 설정한 반경보다 작을 경우에만 이벤트를 보내줍니다.            
-                socket.broadcast.to(key).emit('new_msg', response);
-              }
-            }
-          });
-        });
-        socket.emit('new_msg', response);
-      });   
+      findUserInBound(socket, response, "new_msg") ;
 
       // 4. 해당 메시지가 확성기 타입일 경우에는 푸시 메시지도 보내줘야 합니다.
       if (messageData.type === "LoudSpeaker") {
@@ -265,32 +266,7 @@ exports.init = (http) => {
       } finally {
         // 3. 결과물을 이 메시지를 받아보는 유저와 나에게 쏴야 합니다.
         // 기존 메시지 수신 방식이랑 동일하게 하면 됩니다.
-        redis.hgetall('clients', (err, object) => {
-          if (err) console.log(err);
-
-          const messageLat = response.result.position.coordinates[1];
-          const messageLng = response.result.position.coordinates[0];
-          
-          Object.keys(object).forEach(function (key) {
-            const idx = object[key];
-            redis.hmget("info", idx, (err, result) => {
-              // 4. 먼저 해당 유저의 정보를 info 키 내부에 있는 값으로 가져옵니다.
-              if (err) console.log(err);
-
-              if (result.length > 0) {
-                const value = JSON.parse(result[0]);
-                const distance = geolib.getDistance(
-                  { latitude: value.position[1], longitude: value.position[0] }, // 소켓의 현재 위치 (순서 주의!)
-                  { latitude: messageLat, longitude: messageLng }         // 메시지 발생 위치
-                );
-                if (value.radius >= distance) { // 거리 값이 설정한 반경보다 작을 경우에만 이벤트를 보내줍니다.            
-                  socket.broadcast.to(key).emit('apply_like', response);
-                }
-              }
-            });
-          });
-          socket.emit('apply_like', response);
-        });   
+        findUserInBound(socket, response, "apply_like");
       }      
     });
 

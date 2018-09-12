@@ -4,8 +4,6 @@ const AWS = require('aws-sdk');
 const multer = require('multer');
 const multerS3 = require('multer-s3');
 
-const authModel = require('../models/AuthModel');
-
 /* Image Upload */
 AWS.config.accessKeyId = process.env.AWS_ACCESS_KEY;
 AWS.config.secretAccessKey = process.env.AWS_SECRET_KEY;
@@ -68,3 +66,33 @@ exports.getCurrentDate = () => {
  
   return new Date(Date.UTC(year, month, today, hours, minutes, seconds, milliseconds));
 }
+
+exports.randomGeoLocation = (minLng, minLat) => {
+  let lng, lat;
+  console.log("minLng : " +minLng + ", minLat : " + minLat);
+
+  if (minLng && minLat) {
+    lng = Math.random()*0.1 + minLng;
+    lat = Math.random()*0.1 + minLat;
+  } else {
+    lat = Math.random() * (38.27 - 33.06) + 33.06;
+    lng = Math.random() * (131.52 - 125.04) + 125.04;
+  }
+  
+  return [lng, lat];  
+};
+
+exports.randomNumber = (min, max) => {
+  return Math.floor(Math.random() * max) + min;
+};
+
+exports.randomString = (minLength, maxLength) => {
+  const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const length = Math.floor(Math.random() * maxLength) + minLength;
+  let text = '';
+  
+  for (var i = 0; i < length; i++)
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+  return text;
+};
