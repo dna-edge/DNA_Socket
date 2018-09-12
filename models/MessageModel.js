@@ -14,66 +14,46 @@ exports.save = (messageData) => {
     console.log("... test data is saved");
   }
 
-  // 1. idx 최대값 구하기 
-  return new Promise((resolve, reject) => { 
-    db.messageModel.count((err, result) => {
+  // 1. model 생성하기
+  return new Promise((resolve, reject) => {      
+    const message = new db.messageModel(
+      {
+        user: {
+          idx: messageData.idx,
+          nickname: messageData.nickname,
+          avatar: messageData.avatar
+        },
+        position: {
+          type: "Point",
+          coordinates: [messageData.lng, messageData.lat]
+        },
+        type: messageData.type,
+        contents: messageData.contents,
+        created_at: helpers.getCurrentDate()
+      }
+    );
+
+    // 3. save로 저장
+    message.save((err, result) => {
       if (err) {
-        const customErr = new Error("Error occrred while Counting Messages: " + err);
-        reject(customErr);        
+        reject(err);
       } else {
         resolve(result);
       }
     });
   })
-  .then((count) => {
-    // 2. model 생성하기
-    return new Promise((resolve, reject) => {  
-      let idx = 1;
-      
-      if (count[0]) {
-        idx = count[0].idx + 1;
-      }
-      
-      const message = new db.messageModel(
-        {
-          idx,
-          user: {
-            idx: messageData.idx,
-            nickname: messageData.nickname,
-            avatar: messageData.avatar
-          },
-          position: {
-            type: "Point",
-            coordinates: [messageData.lng, messageData.lat]
-          },
-          type: messageData.type,
-          contents: messageData.contents,
-          created_at: helpers.getCurrentDate()
-        }
-      );
-
-      // 3. save로 저장
-      message.save((err) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(idx);
-        }
-      });
-    });
-  })
-  .then((idx) => {
-    return new Promise((resolve, reject) => {   
-      db.messageModel.selectOne(idx, (err, result) => {
-        if (err) {
-          const customErr = new Error("Error occrred while selecting All Messages: " + err);
-          reject(customErr);        
-        } else {
-          resolve(result);
-        }
-      });
-    });
-  });
+  // .then((idx) => {
+  //   return new Promise((resolve, reject) => {   
+  //     db.messageModel.selectOne(idx, (err, result) => {
+  //       if (err) {
+  //         const customErr = new Error("Error occrred while selecting All Messages: " + err);
+  //         reject(customErr);        
+  //       } else {
+  //         resolve(result);
+  //       }
+  //     });
+  //   });
+  // });
 };
 
 

@@ -17,6 +17,12 @@ module.exports = {
       collection: 'room',
       schemaName: 'roomSchema',
       modelName: 'roomModel'
+    },
+    {
+      file: '../schemas/SeqSchema',
+      collection: 'seq',
+      schemaName: 'seqSchema',
+      modelName: 'seqModel'
     }
   ],
   pagination_count: 20,

@@ -109,7 +109,7 @@ exports.save = (token, param) => {
       response = {
         status: 201,
         message: "Save Message Successfully",
-        result: result[0]
+        result
       };
       // 4 등록 성공! 소켓으로 다시 반대로 쏴줘야 합니다.
       resolve(response);

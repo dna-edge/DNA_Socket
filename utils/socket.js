@@ -63,11 +63,12 @@ exports.storeAll = (id, data) => {
   해당 메시지의 좌표 값을 통해 해당 메시지를 받아볼 유저들을 추려내는 함수입니다.
   @param socket   : 연결한 소켓 자체
   @param response : 메시지의 내용
-  @param event    : 클라리언트로 emit할 이벤트 이름
+  @param event    : 클라이언트로 emit할 이벤트 이름
 */
 const findUserInBound = (socket, response, event) => {
   redis.hgetall('clients', (err, object) => {
     if (err) console.log(err);
+    if (!object || object === null) return;
 
     const messageLat = response.result.position.coordinates[1];
     const messageLng = response.result.position.coordinates[0];
@@ -80,13 +81,15 @@ const findUserInBound = (socket, response, event) => {
 
         if (result.length > 0) {
           const value = JSON.parse(result[0]);
-          const distance = geolib.getDistance(
-            { latitude: value.position[1], longitude: value.position[0] }, // 소켓의 현재 위치 (순서 주의!)
-            { latitude: messageLat, longitude: messageLng }                // 메시지 발생 위치
-          );
-          if (value.radius >= distance) { 
-            // 거리 값이 설정한 반경보다 작을 경우에만 이벤트를 보내줍니다.            
-            socket.broadcast.to(key).emit(event, response);
+          if (value && value !== null) {
+            const distance = geolib.getDistance(
+              { latitude: value.position[1], longitude: value.position[0] }, // 소켓의 현재 위치 (순서 주의!)
+              { latitude: messageLat, longitude: messageLng }                // 메시지 발생 위치
+            );
+            if (value.radius >= distance) { 
+              // 거리 값이 설정한 반경보다 작을 경우에만 이벤트를 보내줍니다.            
+              socket.broadcast.to(key).emit(event, response);
+            }
           }
         }
       });
@@ -111,9 +114,11 @@ exports.init = (http) => {
 
     // 클라의 연결이 종료되었을 경우 레디스에서 해당 정보를 삭제합니다.
     socket.on('disconnect', () => {
-      redis.hmget('clients', socket.id, (err, idx) => {
+      redis.hmget('clients', socket.id, (err, result) => {
+        const idx = result[0];
+        
         if (err) console.log(err);
-        if (idx) {  
+        if (idx && idx !== null) {
           redis.hdel('info', idx);
           redis.zrem('geo:locations', idx);
         }

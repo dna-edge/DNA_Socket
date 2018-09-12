@@ -5,8 +5,8 @@ config:
   socketio:                           # socket.io로 테스트한다는 뜻
     transports: ["websocket"]
   phases:                             # 해당 기간 동안 몇 명의 가상 유저가 생성되는지
-    - duration: 1                     # 테스트가 진행되는 시간 (초 단위)
-      arrivalRate: 1                  # 매 초 생성되는 가상 유저의 수
+    - duration: 30                    # 테스트가 진행되는 시간 (초 단위)
+      arrivalRate: 10                # 매 초 생성되는 가상 유저의 수
         
 scenarios:
   - engine: "socketio"
@@ -14,14 +14,14 @@ scenarios:
       - emit:
           channel: "save_msg"
           data: { 
-            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZHgiOjMsImlkIjoiMzQ1N3Nvc28iLCJuaWNrbmFtZSI6InNveW91bmciLCJhdmF0YXIiOiJodHRwczovL2VuY3J5cHRlZC10Ym4wLmdzdGF0aWMuY29tL2ltYWdlcz9xPXRibjpBTmQ5R2NROGpETVMxTW5jSmc2LVBkUVI1Z3pwVGloZDRxa0w5dWZETkExMzN6UTN0R2FLVzAyWCIsImlhdCI6MTUzNTgyOTU4MywiZXhwIjoxNTM1ODcyNzgzfQ.Va1zlCGwGDTJi2jo-_A8wdymzgKhMUnmI88mPuWefto", 
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZHgiOjMsImlkIjoiMzQ1N3Nvc28iLCJuaWNrbmFtZSI6InNveW91bmciLCJhdmF0YXIiOiJodHRwczovL2VuY3J5cHRlZC10Ym4wLmdzdGF0aWMuY29tL2ltYWdlcz9xPXRibjpBTmQ5R2NROGpETVMxTW5jSmc2LVBkUVI1Z3pwVGloZDRxa0w5dWZETkExMzN6UTN0R2FLVzAyWCIsImlhdCI6MTUzNjc1NjM2NywiZXhwIjoxNTM2Nzk5NTY3fQ.MpRsx6FoRtwmzqhU-uIOCZFnxb2du3K_d562w7g1j_c", 
             "messageData": {
               "lng": 127.101768,
               "lat": 37.590039,
               "contents": "testing",
               "type": "LoudSpeaker"
             },
-            "radius": 500,
+            "radius": 1000,
             "testing": true
           }
       - think: 1

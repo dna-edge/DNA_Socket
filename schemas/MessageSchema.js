@@ -6,7 +6,7 @@ let Schema = {};
 
 Schema.createSchema = (mongoose) => {
   const messageSchema = mongoose.Schema({
-    idx: { type: Number, required: true, index: { unique: true } },
+    idx: { type: Number, index: { unique: true } },
     user: {
       idx: { type: Number, required: true },
       nickname: { type: String, required: true },
@@ -29,11 +29,26 @@ Schema.createSchema = (mongoose) => {
    * 메소드 시작
   ********************/
 
-  // count : idx의 최대값 구하기
-  messageSchema.static('count', async function(callback) {
-    return await this.find({}, { idx: 1 }, callback)
-      .sort({ "idx": -1 }).limit(1);
+  messageSchema.pre('save', function(next) {
+    let doc = this;
+    
+    global.utils.mongo.seqModel.findByIdAndUpdate(
+      {_id: "message"}, {$inc: {idx: 1}}, {upsert: true, new: true}, function(err, count) {
+
+      if (err) {
+        console.log(err);
+        return next(err);
+      }
+      
+      doc.idx = count.idx;
+      next();
+    });
   });
+
+  // messageSchema.post('save', function(result) {
+  //   console.log('저장 완료', result);
+  // });
+
 
   // selectOne : 하나 조회하기
   messageSchema.static('selectOne', function(idx, callback) {
