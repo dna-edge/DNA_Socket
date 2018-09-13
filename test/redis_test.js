@@ -4,9 +4,6 @@
 ' 목적     : 레디스에 테스트용 유저의 세션 정보를 저장합니다.
 ' 사용방식  : node redis_test.js @param inboundCount, @param outbound_count, @param Lng, @param Lat
 '           node ./test/redis_test.js 20 80 127.101768 37.590039
-' 오류처리  : 
-' 이력사항
-'           2018.09.12 파일 생성
 ******************************************************************************/
 
 const args = process.argv.slice(2);
@@ -22,7 +19,7 @@ const inboundCount = parseInt(args[0]);
 const outboundCount = parseInt(args[1]);
 const currentLng = args[2];
 const currentLat = args[3];
-const storeFunction = require('./../utils/socket').storeAll;
+const storeFunction = require('./../utils/session').storeAll;
 const helpers = require('./../utils/helpers');
 
 const minInbountLng = (Math.floor(currentLng * 10)) * 0.1;

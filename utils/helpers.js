@@ -1,3 +1,9 @@
+/******************************************************************************
+' 파일     : helpers.js
+' 작성     : 박소영
+' 목적     : 서버 내에서 두루 쓰이는 helper 함수들의 모음입니다.
+******************************************************************************/
+
 const fs = require('fs');
 
 const AWS = require('aws-sdk');
@@ -104,5 +110,5 @@ exports.randomString = (minLength, maxLength) => {
  *  @return: String ex "-1271-375"
  ********************/
 exports.getMapkey = (position) => {
-  return "-" + Math.floor(position[0] * 10) + "-" + Math.floor(position[1] * 10);
+  return "" + Math.floor(position[0] * 10) + Math.floor(position[1] * 10);
 }

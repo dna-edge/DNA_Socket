@@ -1,110 +1,20 @@
+/******************************************************************************
+' 파일     : socket.js
+' 작성     : 박소영
+' 목적     : Socket IO 이벤트들을 정리해놓은 파일입니다.
+******************************************************************************/
+
 const redis = global.utils.redis;
 const rabbitMQ = global.utils.rabbitMQ;
 const logger = global.utils.logger;
-
-const geolib = require('geolib');
-var geo = require('georedis').initialize(redis);
 
 const messageCtrl = require('../controllers/MessageCtrl');
 const dmCtrl = require('../controllers/DMCtrl');
 const helpers = require('./helpers');
 const errorCode = require('./error').code;
 const config = require('./config');
-
-const storeClient = (key, value, mapKey) => {
-  redis.hmset(mapKey,                 // redis Key
-  key,                                // redis Value / hashmap Key    (socket id)
-  value);                             // redis Value / hashmap Value  (client info)
-};
-
-const storeInfo = (idx, info, mapKey) => {
-  redis.hmset(mapKey,
-  idx, 
-  info);
-}
-
-const storeGeoInfo = (idx, position, mapKey) => {
-  geo.addLocation(idx, 
-    { latitude: position[1], longitude: position[0] });
-};
-
-// 정보가 레디스에 존재하는지 체크하지 않아도 자동으로 갱신됩니다.
-// This command overwrites any specified fields already existing in the hash.
-// If key does not exist, a new key holding a hash is created.      
-
-/* 
-  레디스에 전달 받은 유저 정보를 저장하는 함수입니다.
-  @param id       : 저장할 유저의 idx
-  @param data     : 저장할 내용을 담은 JSON 오브젝트
-         socket   : 해당 유저가 현재 물고 있는 소켓의 아이디
-         position : 유저의 현재 위치
-         radius   : 유저가 설정한 반경 값
-         nickname : 유저의 닉네임
-         avatar   : 유저의 프로필 이미지 주소
-*/
-exports.storeAll = (id, data) => {
-  const idx = data.idx;
-  const position = data.position;  
-  const mapKey = helpers.getMapkey(position);
-  
-  const info = {
-    socket: id,
-    position: position,
-    radius: data.radius,
-    nickname: data.nickname,
-    avatar: data.avatar,
-  };
-
-  if(idx && idx !== undefined){
-    storeClient(id, idx, "client"+mapKey);
-    storeInfo(idx, JSON.stringify(info), "info"+mapKey);
-    storeGeoInfo(idx, data.position, mapKey);
-  }      
-}
-
-/* 
-  해당 메시지의 좌표 값을 통해 해당 메시지를 받아볼 유저들을 추려내는 함수입니다.
-  @param socket   : 연결한 소켓 자체
-  @param response : 메시지의 내용
-  @param event    : 클라이언트로 emit할 이벤트 이름
-*/
-const findUserInBound = (socket, response, event) => {
-  const position = response.result.position.coordinates;
-  const mapKey = helpers.getMapkey(position);
-  
-  redis.hgetall("client" + mapKey, (err, object) => {
-    if (err) logger.log("error", "Error: websocket error", error);
-    if (!object || object === null) return;
-
-    const messageLat = response.result.position.coordinates[1];
-    const messageLng = response.result.position.coordinates[0];
-    
-    Object.keys(object).forEach(function (key) {
-      const idx = object[key];
-      
-      redis.hmget("info" + mapKey, idx, (err, result) => {
-        // 먼저 해당 유저의 정보를 info 키 내부에 있는 값으로 가져옵니다.
-        if (err) logger.log("error", "Error: websocket error", error);
-
-        if (result.length > 0) {
-          const value = JSON.parse(result[0]);
-          if (value && value !== null) {
-            const distance = geolib.getDistance(
-              { latitude: value.position[1], longitude: value.position[0] }, // 소켓의 현재 위치 (순서 주의!)
-              { latitude: messageLat, longitude: messageLng }                // 메시지 발생 위치
-            );
-            if (value.radius >= distance) { 
-              // 거리 값이 설정한 반경보다 작을 경우에만 이벤트를 보내줍니다.            
-              socket.broadcast.to(key).emit(event, response);
-            }
-          }
-        }
-      });
-    });
-    socket.emit(event, response);
-  });   
-};
-
+const session = require('./session');
+const geolib = require('geolib');
 
 exports.init = (http) => {
   const io = require('socket.io')(http, 
@@ -127,26 +37,27 @@ exports.init = (http) => {
     ********************/
     // 클라에서 보내온 정보를 레디스에 저장합니다.
     socket.on('store', (data) => {
-      this.storeAll(socket.id, data);
+      session.storeAll(socket.id, data);
+      // session.returnSessionList("type", data.position);
     });
 
     // 클라의 연결이 종료되었을 경우 레디스에서 해당 정보를 삭제합니다.
     socket.on('disconnect', () => {
-      redis.hmget('clients', socket.id, (err, result) => {
-        const idx = result[0];
+      // redis.hmget('clients', socket.id, (err, result) => {
+      //   const idx = result[0];
         
-        if (err) logger.log("error", "Error: websocket error", error);
-        if (idx && idx !== null) {
-          redis.hdel('info', idx);
-          redis.zrem('geo:locations', idx);
-        }
-        redis.hdel('clients', socket.id);      
-      });        
+      //   if (err) logger.log("error", "Error: websocket error", error);
+      //   if (idx && idx !== null) {
+      //     redis.hdel('info', idx);
+      //     redis.zrem('geo:locations', idx);
+      //   }
+      //   redis.hdel('clients', socket.id);      
+      // });        
     });
 
     // 클라가 주기적으로 현재 위치를 업데이트하면 이를 레디스에서 갱신합니다.
     socket.on('update', async (type, data) => {    
-      this.storeAll(socket.id, data);
+      session.storeAll(socket.id, data);
       const position = data.position;
 
       // 해당 위치와 radius에 맞는 접속자와 접속중인 친구들을 찾아 보내줍니다.
@@ -159,10 +70,12 @@ exports.init = (http) => {
           // nearby @param : {위도, 경도}, 반경
           // 현재 유저의 위치로부터 유저가 설정한 반경값 이내에 존재하는 접속자만 추려냅니다.
           // + 기능 추가 : 주변에 접속중인 사람인지만 보여주지 말고, 그 유저도 내 메시지를 받아볼 수 있는지도 추가합니다.
-          geo.nearby({latitude: position[1], longitude: position[0]}, data.radius, 
+          const mapKey = helpers.getMapkey(position) + "geo";
+            redis.georadius(mapKey, position[0], position[1], data.radius, "m",
             (err, positions) => {
               if (err) {
                 logger.log("error", "Error: websocket error", error);
+                console.log(err);
                 reject(err);
               } else {
                 resolve(positions);
@@ -176,10 +89,11 @@ exports.init = (http) => {
             positions.map(async (idx, i) => {
               // redis의 모든 값들을 가져오지 말고, 
               // 현재 유저가 존재하는 위치 내 타일에 있는 유저들만 끌고 오면 된다!
-              const mapKey = "info" + helpers.getMapkey(position);
+              const mapKey = helpers.getMapkey(position) + "info";
               redis.hmget(mapKey, idx, (err, info) => {
                 if (err) {
                   logger.log("error", "Error: websocket error", error);
+                  console.log(err);
                   reject(err);
                 }
                 else {
@@ -238,16 +152,17 @@ exports.init = (http) => {
       } catch (err) {
         logger.log("error", "Error: websocket error", error);
         response = errorCode[err];
+        console.log(err);
       } finally {
         if (!response || response === null) {        
           logger.log("error", "Error: websocket error", error);
+          console.log(err);
           return;
         }
 
-        const messageLat = response.result.position.coordinates[1];
-        const messageLng = response.result.position.coordinates[0];
+        const position = response.result.position.coordinates;
 
-        findUserInBound(socket, response, "new_msg") ;
+        session.findUserInBound(socket, response, "new_msg") ;
 
         // 4. 해당 메시지가 확성기 타입일 경우에는 푸시 메시지도 보내줘야 합니다.
         if (messageData.type === "LoudSpeaker") {
@@ -256,10 +171,12 @@ exports.init = (http) => {
           await new Promise((resolve, reject) => {
             // nearby @param : {위도, 경도}, 반경
             // 작성된 메시지로의 좌표값으로부터 주어진 반경 이내에 위치한 사용자만 추려냅니다.
-            geo.nearby({latitude: messageLat, longitude: messageLng}, radius, 
+            const mapKey = helpers.getMapkey(position) + "geo";
+            redis.georadius(mapKey, position[0], position[1], radius, "m",
               (err, positions) => {
                 if (err) {
                   logger.log("error", "Error: websocket error", error);
+                  console.log(err);
                   reject(err);
                 } else {
                   resolve(positions);
@@ -267,11 +184,12 @@ exports.init = (http) => {
               });
           })
           .then((positions) => {
+            const mapKey = helpers.getMapkey(position) + "info";
             positions.map(async (idx, i) => {
-              redis.hmget('info', idx, (err, info) => {
+              redis.hmget(mapKey, idx, (err, info) => {
                 if (err) {
-                  console.log(err);
                   logger.log("error", "Error: websocket error", error);
+                  console.log(err);
                 }
                 else {
                   const json = JSON.parse(info[0]);
@@ -297,14 +215,16 @@ exports.init = (http) => {
       } catch (err) {
         logger.log("error", "Error: websocket error", error);
         response = errorCode[err];
+        console.log(err);
       } finally {
         // 3. 결과물을 이 메시지를 받아보는 유저와 나에게 쏴야 합니다.
         // 기존 메시지 수신 방식이랑 동일하게 하면 됩니다.
         if (!response || response === null) {        
           logger.log("error", "Error: websocket error", error);
+          console.log(err);
           return;
         }
-        findUserInBound(socket, response, "apply_like");
+        session.findUserInBound(socket, response, "apply_like");
       }      
     });
 
@@ -322,6 +242,7 @@ exports.init = (http) => {
       } catch (err) {
         logger.log("error", "Error: websocket error", error);
         response = errorCode[err];
+        console.log(err);
       } finally {
         // 3. 결과물을 해당 유저와 나에게 쏴야 합니다.
         // redis의 세션 목록에 해당 유저가 있는지 확인하고, 있으면 쏩니다.
