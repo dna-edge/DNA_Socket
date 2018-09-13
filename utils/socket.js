@@ -36,9 +36,8 @@ exports.init = (http) => {
      * 소켓 연결
     ********************/
     // 클라에서 보내온 정보를 레디스에 저장합니다.
-    socket.on('store', (data) => {
+    socket.on('store', async (data) => {
       session.storeAll(socket.id, data);
-      // session.returnSessionList("type", data.position);
     });
 
     // 클라의 연결이 종료되었을 경우 레디스에서 해당 정보를 삭제합니다.
@@ -56,7 +55,7 @@ exports.init = (http) => {
     });
 
     // 클라가 주기적으로 현재 위치를 업데이트하면 이를 레디스에서 갱신합니다.
-    socket.on('update', async (type, data) => {    
+    socket.on('update', (type, data) => {    
       session.storeAll(socket.id, data);
       const position = data.position;
 
@@ -66,21 +65,12 @@ exports.init = (http) => {
       //    dm  : 접속 중인 친구 리스트 return
 
       if (type === "geo") {
-        await new Promise((resolve, reject) => {
+        new Promise(async (resolve, reject) => {
           // nearby @param : {위도, 경도}, 반경
           // 현재 유저의 위치로부터 유저가 설정한 반경값 이내에 존재하는 접속자만 추려냅니다.
           // + 기능 추가 : 주변에 접속중인 사람인지만 보여주지 말고, 그 유저도 내 메시지를 받아볼 수 있는지도 추가합니다.
-          const mapKey = helpers.getMapkey(position) + "geo";
-            redis.georadius(mapKey, position[0], position[1], data.radius, "m",
-            (err, positions) => {
-              if (err) {
-                logger.log("error", "Error: websocket error", error);
-                console.log(err);
-                reject(err);
-              } else {
-                resolve(positions);
-              }
-            });
+          const positions = await session.returnSessionList("geo", position, data.radius);
+          positions.length > 0 ? resolve(positions) : reject();
         })
         .then((positions) => {
           return new Promise((resolve, reject) => {
@@ -92,7 +82,7 @@ exports.init = (http) => {
               const mapKey = helpers.getMapkey(position) + "info";
               redis.hmget(mapKey, idx, (err, info) => {
                 if (err) {
-                  logger.log("error", "Error: websocket error", error);
+                  logger.log("error", "Error: websocket error", err);
                   console.log(err);
                   reject(err);
                 }
@@ -150,45 +140,34 @@ exports.init = (http) => {
       try {
         response = await messageCtrl.save(token, messageData);
       } catch (err) {
-        logger.log("error", "Error: websocket error", error);
+        logger.log("error", "Error: websocket error", err);
         response = errorCode[err];
         console.log(err);
       } finally {
         if (!response || response === null) {        
-          logger.log("error", "Error: websocket error", error);
-          console.log(err);
           return;
         }
 
         const position = response.result.position.coordinates;
-
         session.findUserInBound(socket, response, "new_msg") ;
 
         // 4. 해당 메시지가 확성기 타입일 경우에는 푸시 메시지도 보내줘야 합니다.
         if (messageData.type === "LoudSpeaker") {
           rabbitMQ.channel.publish("push", "speaker", new Buffer(JSON.stringify(response)));
           // 5. 푸시 메시지를 보내줄 대상을 선별해줘야 합니다.        
-          await new Promise((resolve, reject) => {
+          await new Promise(async (resolve, reject) => {
             // nearby @param : {위도, 경도}, 반경
             // 작성된 메시지로의 좌표값으로부터 주어진 반경 이내에 위치한 사용자만 추려냅니다.
             const mapKey = helpers.getMapkey(position) + "geo";
-            redis.georadius(mapKey, position[0], position[1], radius, "m",
-              (err, positions) => {
-                if (err) {
-                  logger.log("error", "Error: websocket error", error);
-                  console.log(err);
-                  reject(err);
-                } else {
-                  resolve(positions);
-                }
-              });
+            const positions = await session.returnSessionList("geo", position, radius);
+            positions.length > 0 ? resolve(positions) : reject();
           })
           .then((positions) => {
             const mapKey = helpers.getMapkey(position) + "info";
             positions.map(async (idx, i) => {
               redis.hmget(mapKey, idx, (err, info) => {
                 if (err) {
-                  logger.log("error", "Error: websocket error", error);
+                  logger.log("error", "Error: websocket error", err);
                   console.log(err);
                 }
                 else {
@@ -213,14 +192,13 @@ exports.init = (http) => {
       try {
         response = await messageCtrl.like(token, idx);
       } catch (err) {
-        logger.log("error", "Error: websocket error", error);
+        logger.log("error", "Error: websocket error", err);
         response = errorCode[err];
         console.log(err);
       } finally {
         // 3. 결과물을 이 메시지를 받아보는 유저와 나에게 쏴야 합니다.
         // 기존 메시지 수신 방식이랑 동일하게 하면 됩니다.
         if (!response || response === null) {        
-          logger.log("error", "Error: websocket error", error);
           console.log(err);
           return;
         }
@@ -240,7 +218,7 @@ exports.init = (http) => {
       try {
         response = await dmCtrl.save(token, messageData);
       } catch (err) {
-        logger.log("error", "Error: websocket error", error);
+        logger.log("error", "Error: websocket error", err);
         response = errorCode[err];
         console.log(err);
       } finally {

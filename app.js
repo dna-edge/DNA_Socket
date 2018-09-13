@@ -35,9 +35,9 @@ function exitHandler(options, exitCode) {
   // global.utils.redis.del("info");
   // global.utils.redis.del("clients");
   // global.utils.redis.del("geo:locations");
-  global.utils.redis.flushdb((err, result) => {
-    console.log("[ Redis ] session datas in Redis are removed Successfully ...");
-  });
+  // global.utils.redis.flushdb((err, result) => {
+  //   console.log("[ Redis ] session datas in Redis are removed Successfully ...");
+  // });
   
   if (options.exit) {
     process.exit();

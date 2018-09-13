@@ -40,7 +40,6 @@ exports.storeAll = (id, data) => {
 
 const storeHashMap = (type, mapKey, key, value) => {
   redis.hmset(mapKey + type, key, value);
-
   // TYPE       key         value
   // client     socket ID   user idx
   // info       user idx    user info JSON
@@ -64,86 +63,105 @@ const storeGeo = (idx, position, mapKey) => {
   @param event    : 클라이언트로 emit할 이벤트 이름
 */
 exports.findUserInBound = (socket, response, event) => {
-  const position = response.result.position.coordinates;
-  const mapKey = helpers.getMapkey(position);
-  
-  redis.hgetall(mapKey + "client", (err, object) => {
-    if (err) {
-      logger.log("error", "Error: websocket error", error);
-      console.log(err);
-    }
-    if (!object || object === null) return;
-
-    const messageLat = response.result.position.coordinates[1];
-    const messageLng = response.result.position.coordinates[0];
+  return new Promise(async (resolve, reject) => {
+    // 먼저 현재 위치를 기반으로 client 리스트를 뽑아옵니다.
+    const position = response.result.position.coordinates;
+    const mapKey = helpers.getMapkey(position);
+    const clientList = await this.returnSessionList("client", position);
     
-    Object.keys(object).forEach(function (key) {
-      const idx = object[key];
-      
-      redis.hmget(mapKey + "info", idx, (err, result) => {
-        // 먼저 해당 유저의 정보를 info 키 내부에 있는 값으로 가져옵니다.
-        if (err) {
-          logger.log("error", "Error: websocket error", error);
-          console.log(err);
-        }
+    if (clientList) {
+      const next = {
+        clientList, mapKey, response
+      };
+      resolve(next);
+    } else {
+      reject();
+    }
+  })
+  .then((next) => {
+    // 2. 다음으로 해당 client 리스트 별로 info 정보를 가져옵니다.
+    return new Promise((resolve, reject) => {
+      Object.keys(next.clientList).forEach(function (key) {
+        const idx = next.clientList[key];
 
-        if (result.length > 0) {
-          const value = JSON.parse(result[0]);
-          if (value && value !== null) {
-            const distance = geolib.getDistance(
-              { latitude: value.position[1], longitude: value.position[0] }, // 소켓의 현재 위치 (순서 주의!)
-              { latitude: messageLat, longitude: messageLng }                // 메시지 발생 위치
-            );
-            if (value.radius >= distance) { 
-              // 거리 값이 설정한 반경보다 작을 경우에만 이벤트를 보내줍니다.            
-              socket.broadcast.to(key).emit(event, response);
+        redis.hmget(next.mapKey + "info", idx, (err, result) => {
+          if (err) {
+            console.log(err);
+            reject();
+          }
+  
+          if (result.length > 0) {
+            const value = JSON.parse(result[0]);
+            const messageLng = next.response.result.position.coordinates[0];
+            const messageLat = next.response.result.position.coordinates[1];
+
+            if (value && value !== null) {
+              const distance = geolib.getDistance(
+                { latitude: value.position[1], longitude: value.position[0] }, // 소켓의 현재 위치 (순서 주의!)
+                { latitude: messageLat, longitude: messageLng }                // 메시지 발생 위치
+              );
+              if (value.radius >= distance) { 
+                // 거리 값이 설정한 반경보다 작을 경우에만 이벤트를 보내줍니다.            
+                socket.broadcast.to(key).emit(event, next.response);
+              }
             }
           }
-        }
+        });
       });
-    });
-    socket.emit(event, response);
-  });   
+      socket.emit(event, response); // 자신에게도 전송합니다.
+    })
+  });
 };
 
 /* 
   좌표 값을 주면, 해당 좌표의 타일과 옆 타일의 유저를 찾아 반환하는 함수입니다.
   @param type     : client, info, geo 중 하나
   @param position : 유저를 찾을 기준이 되는 좌표 값
+  @param radius   : (type이 geo일 경우) 반경 값
 */
-exports.returnSessionList = (type, position) => {
-  // 먼저 현재 좌표를 이용해 현재 타일과 추가적으로 살펴야 할 타일을 구합니다.
-  const lng = position[0];
-  const lat = position[1];
-  const lngTile = Math.floor(lng * 10);
-  const latTile = Math.floor(lat * 10);
-  const newLngTile = (lng - Math.floor(lng)) * 10 * 2 > 1 ? lngTile + 1 : lngTile - 1;
-  const newLatTile = (lat - Math.floor(lat)) * 10 * 2 > 1 ? latTile + 1 : latTile - 1;
+exports.returnSessionList = (type, position, radius) => {
+  return new Promise((resolve, reject) => {
+    // 먼저 현재 좌표를 이용해 현재 타일과 추가적으로 살펴야 할 타일을 구합니다.
+    const lng = position[0];
+    const lat = position[1];
+    const lngTile = Math.floor(lng * 10);
+    const latTile = Math.floor(lat * 10);
+    const newLngTile = (lng - Math.floor(lng)) * 10 * 2 > 1 ? lngTile + 1 : lngTile - 1;
+    const newLatTile = (lat - Math.floor(lat)) * 10 * 2 > 1 ? latTile + 1 : latTile - 1;
 
-  const selectKeys = [
-    type + lngTile + latTile,       // 기본 키
-    type + lngTile + newLatTile,    // 추가로 찾아야 하는 키 (좌우)
-    type + newLngTile + latTile     // 추가로 찾아야 하는 키 (상하)
-  ];
+    const selectKeys = [
+      lngTile + "-" + latTile + type,       // 기본 키
+      lngTile + "-" + newLatTile + type,    // 추가로 찾아야 하는 키 (좌우)
+      newLngTile + "-" + latTile + type     // 추가로 찾아야 하는 키 (상하)
+    ];
 
-  let result = [];
+    let resultForHash = {};
+    let resultForGeo = [];
 
-  selectKeys.map((key) => {
-    if (type === "geo") {   // 타입이 geo일 경우엔 GEO API 사용
-
-    } else {                // 타입이 client이거나 info일 경우엔 hash 사용
-      redis.hgetall(key, (err, object) => {
-        if (err) console.log(err);
-        const receiver = response.result.receiver;
-        if (object[receiver]) { // 해당 유저가 현재 접속중일 경우에만 보내고,
-          socket.broadcast.to(JSON.parse(object[receiver]).socket).emit('new_dm', response);
-        }
-        // 내 자신에게도 발송해줍니다!
-        socket.emit('new_dm', response);
-      });
-    }
+    selectKeys.map((key, i) => {
+      // 생성한 키 별로 select해, 결과를 합친 다음 결과를 return 합니다.
+      if (type === "geo") {   // 타입이 geo일 경우엔 GEO API를 사용합니다.
+        redis.georadius(key, lng, lat, radius, "m", (err, positions) => {
+          if (err) {
+            console.log(err);
+            reject(err);
+          }
+          resultForGeo = resultForGeo.concat(positions);
+          resolve(resultForGeo);          
+        });
+      } else {                // 타입이 client이거나 info일 경우엔 hash 사용      
+        redis.hgetall(key, (err, object) => {
+          if (err) {
+            console.log(err);
+            reject(err);
+          }
+          resultForHash = Object.assign(resultForHash, object);  
+          
+          if (i === 2) { // 조회가 모두 끝나면 return!
+            resolve(resultForHash);
+          }
+        });
+      }
+    });
   });
-
-  
-
 }

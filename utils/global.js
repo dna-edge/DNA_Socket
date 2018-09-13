@@ -8,6 +8,7 @@ const config = require('../utils/config');
 
 /* redis */
 const redis = require('redis').createClient(process.env.REDIS_PORT, process.env.EC2_HOST);
+// bluebird.promisifyAll(redis);
 redis.auth(process.env.REDIS_PASSWORD);
 
 /* mysql */
@@ -114,9 +115,9 @@ let testMongo = mongoose.createConnection(testUrl, options);
 // test에도 스키마와 모델 객체 생성해주기
 testMongo.once('open', function() {
   console.log("[MongoDB] *** New connection established with the *** TEST *** MongoDB ...");
-  const testModel = testMongo.model("messageModel", 
-    require("../schemas/MessageSchema").createSchema(mongoose));
-  testMongo["messageModel"] = testModel;
+  const testModel = testMongo.model("testModel", 
+    require("../schemas/TestSchema").createSchema(mongoose));
+  testMongo["testModel"] = testModel;
   
   testMongo.collection("messagemodels").deleteMany({},function(err){
     console.log("[MongoDB] dummy messages in test DB are removed Successfully ...");

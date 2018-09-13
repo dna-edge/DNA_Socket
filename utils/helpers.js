@@ -107,8 +107,8 @@ exports.randomString = (minLength, maxLength) => {
 /*******************
  *  getMapKey
  *  @param : position = [lng, lat]
- *  @return: String ex "-1271-375"
+ *  @return: String ex "1271-375"
  ********************/
 exports.getMapkey = (position) => {
-  return "" + Math.floor(position[0] * 10) + Math.floor(position[1] * 10);
+  return Math.floor(position[0] * 10) + "-" + Math.floor(position[1] * 10);
 }
