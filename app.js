@@ -20,30 +20,6 @@ require('dotenv').config();
 global.utils = require('./utils/global');
 require('./routes')(app);
 
-/* Error Handler*/
-process.stdin.resume(); //so the program will not close instantly
-
-process.on('exit',    exitHandler.bind(null, {cleanup:true}));        // 프로세스가 종료되었을 경우
-process.on('SIGINT',  exitHandler.bind(null, {exit:true}));           // Ctrl+C가 눌렸을 경우
-process.on('SIGUSR1', exitHandler.bind(null, {exit:true}));           // kill pid로 종료될 경우
-process.on('SIGUSR2', exitHandler.bind(null, {exit:true}));
-process.on('uncaughtException', exitHandler.bind(null, {exit:true})); // 기타
-
-// 프로세스가 종료되면 연결된 소켓이 모두 끊어지므로, 
-// 레디스 내에 있는 세션이 의미가 없게 되니까 자동으로 내용이 삭제되도록 합니다.
-function exitHandler(options, exitCode) {
-  // global.utils.redis.del("info");
-  // global.utils.redis.del("clients");
-  // global.utils.redis.del("geo:locations");
-  // global.utils.redis.flushdb((err, result) => {
-  //   console.log("[ Redis ] session datas in Redis are removed Successfully ...");
-  // });
-  
-  if (options.exit) {
-    process.exit();
-  }
-}
-
 // 로컬에서 개발하는 development 모드와, 실제로 배포하는 production 모드로 나누어,
 // 크로스 도메인 문제를 해결하고 production 모드의 경우 https를 적용합니다.
 let server, corsOptions;
@@ -85,10 +61,15 @@ switch(process.env.NODE_ENV){
     return;
 }
 
+const args = process.argv.slice(2);
+if (args.length < 1) {
+  process.exit();
+}
+
 require('./utils/socket').init(server);
-server.listen(process.env.PORT, process.env.HOST, () => {
+server.listen(args[0], process.env.HOST, () => {
   console.info('[DNA-SocketApiServer] Listening on port %s at %s', 
-  process.env.PORT, process.env.HOST);
+  args[0], process.env.HOST);
 });
 
 module.exports = app;

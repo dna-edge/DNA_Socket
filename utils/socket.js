@@ -37,6 +37,7 @@ exports.init = (http) => {
     ********************/
     // 클라에서 보내온 정보를 레디스에 저장합니다.
     socket.on('store', (data) => {
+      console.log(io.sockets);
       console.log(data)
       session.storeAll(socket.id, data);
     });

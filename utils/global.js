@@ -11,6 +11,11 @@ const redis = require('redis').createClient(process.env.REDIS_PORT, process.env.
 // bluebird.promisifyAll(redis);
 redis.auth(process.env.REDIS_PASSWORD);
 
+// 먼저 세션과 관련된 redis 데이터를 모두 초기화해줍니다.
+redis.flushdb((err, result) => {
+  console.log("[ Redis ] session datas in Redis are removed Successfully ...");
+});
+
 /* mysql */
 const mysql = require('mysql');
 const dbConfig = {
@@ -35,11 +40,11 @@ connection.connect(function(err){
 function reconnect(connection){
   console.log("[ MYSQL ] New connection tentative ...");
 
-  if (connection) connection.destroy(); // 현재 커넥션이 존재한다면 끊고 새로 만든다.
+  if (connection) connection.destroy(); // 현재 커넥션이 존재한다면 끊고 새로 만듭니다.
   connection = mysql.createConnection(dbConfig);
 
   connection.connect(function(err){
-      if (err) setTimeout(reconnect, 2000); // 2초마다 연결을 요청한다.
+      if (err) setTimeout(reconnect, 2000); // 2초마다 연결을 요청합니다.
       else {
           console.log("[ MYSQL ] *** New connection established with the database ... ")
           return connection;
