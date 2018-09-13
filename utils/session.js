@@ -18,13 +18,13 @@ const helpers = require('./helpers');
          nickname : 유저의 닉네임
          avatar   : 유저의 프로필 이미지 주소
 */
-exports.storeAll = (id, data) => {
+exports.storeAll = (socketId, data) => {
   const idx = data.idx;
   const position = data.position;  
   const mapKey = helpers.getMapkey(position);
   
   const info = {
-    socket: id,
+    socket: socketId,
     position: position,
     radius: data.radius,
     nickname: data.nickname,
@@ -32,9 +32,11 @@ exports.storeAll = (id, data) => {
   };
 
   if(idx && idx !== undefined){
-    storeHashMap("client", mapKey, id, idx);
+    storeHashMap("client", mapKey, socketId, idx);
     storeHashMap("info", mapKey, idx, JSON.stringify(info));
-    storeGeo(idx, data.position, mapKey);
+
+    redis.geoadd(mapKey + "geo", position[0], position[1], idx);
+    redis.hmset("tilemap", socketId, mapKey);
   }      
 }
 
@@ -43,14 +45,8 @@ const storeHashMap = (type, mapKey, key, value) => {
   // TYPE       key         value
   // client     socket ID   user idx
   // info       user idx    user info JSON
-}
-
-const storeGeo = (idx, position, mapKey) => {
-  // GEOADD key longitude latitude member
-  // position = [lng, lat]
-
-  redis.geoadd(mapKey + "geo", position[0], position[1], idx);
 };
+
 // 정보가 레디스에 존재하는지 체크하지 않아도 자동으로 갱신됩니다.
 // This command overwrites any specified fields already existing in the hash.
 // If key does not exist, a new key holding a hash is created.      
@@ -164,4 +160,51 @@ exports.returnSessionList = (type, position, radius) => {
       }
     });
   });
+}
+
+/* 
+  소켓ID를 주면 해당 소켓에 물려있는 유저의 타일 키 값을 반환합니다.
+  @param socketID : 찾고 싶은 유저의 소켓 ID
+*/
+exports.returnMapKey = (socketID) => {
+  return new Promise((resolve, reject) => {
+    redis.hmget("tilemap", socketID, (err, result) => {
+      if (err) {
+        console.log(err);
+        reject();
+      } else {        
+        if (result && result.length > 0) {
+          resolve(result[0]);
+        } else {
+          resolve(null);
+        }
+      }
+    });
+  });
+}
+
+/* 
+  소켓ID를 주면 해당 소켓에 물려있는 유저의 정보를 레디스에서 모두 삭제합니다.
+  @param socketID : 삭제할 유저의 소켓 ID
+*/
+exports.removeSession = async (socketID) => {
+  const mapKey = await this.returnMapKey(socketID);
+  redis.hdel("tilemap", socketID);
+
+  if (mapKey && mapKey !== null) {
+    redis.hmget(mapKey + "client", socketID, (err, result) => {
+      if (err) {
+        console.log(err);                
+      } else {
+        if (result && result.length > 0) {
+          const idx = result[0];
+          if (idx && idx !== null) {
+            redis.zrem(mapKey + "geo", idx);
+            redis.hdel(mapKey + "info", idx);
+          }
+        }
+        redis.hdel(mapKey + "client", socketID);
+      }
+    });
+  }      
 }

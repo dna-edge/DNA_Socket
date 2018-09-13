@@ -36,28 +36,32 @@ exports.init = (http) => {
      * 소켓 연결
     ********************/
     // 클라에서 보내온 정보를 레디스에 저장합니다.
-    socket.on('store', async (data) => {
+    socket.on('store', (data) => {
+      console.log(data)
       session.storeAll(socket.id, data);
     });
 
     // 클라의 연결이 종료되었을 경우 레디스에서 해당 정보를 삭제합니다.
     socket.on('disconnect', () => {
-      // redis.hmget('clients', socket.id, (err, result) => {
-      //   const idx = result[0];
-        
-      //   if (err) logger.log("error", "Error: websocket error", error);
-      //   if (idx && idx !== null) {
-      //     redis.hdel('info', idx);
-      //     redis.zrem('geo:locations', idx);
-      //   }
-      //   redis.hdel('clients', socket.id);      
-      // });        
+      session.removeSession(socket.id);
     });
 
     // 클라가 주기적으로 현재 위치를 업데이트하면 이를 레디스에서 갱신합니다.
-    socket.on('update', (type, data) => {    
-      session.storeAll(socket.id, data);
+    socket.on('update', async (type, data) => {    
+      // 먼저 현재 위치를 mapKey로 변환해 위치에 변화가 있는지 확인해야 합니다.
       const position = data.position;
+      const newMapKey = helpers.getMapkey(position);
+      const currentMapKey = await session.returnMapKey(socket.id);
+
+      if (!currentMapKey || currentMapKey === null) {
+        return;
+      }
+
+      if (newMapKey !== currentMapKey) { // 두 값이 다르다면 기존 값을 먼저 지워줘야 합니다.
+        session.removeSession(socket.id);
+      }
+      session.storeAll(socket.id, data);
+      
 
       // 해당 위치와 radius에 맞는 접속자와 접속중인 친구들을 찾아 보내줍니다.
       // 유저에게 type을 받아서, 이에 맞는 정보를 찾아서 보내주면 됩니다.
