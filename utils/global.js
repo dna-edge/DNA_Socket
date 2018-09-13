@@ -8,8 +8,11 @@ const config = require('../utils/config');
 
 /* redis */
 const redis = require('redis').createClient(process.env.REDIS_PORT, process.env.EC2_HOST);
-// bluebird.promisifyAll(redis);
 redis.auth(process.env.REDIS_PASSWORD);
+const pub = require('redis').createClient(process.env.REDIS_PORT, process.env.EC2_HOST);
+pub.auth(process.env.REDIS_PASSWORD);
+const sub = require('redis').createClient(process.env.REDIS_PORT, process.env.EC2_HOST);
+sub.auth(process.env.REDIS_PASSWORD);
 
 // 먼저 세션과 관련된 redis 데이터를 모두 초기화해줍니다.
 redis.flushdb((err, result) => {
@@ -181,6 +184,8 @@ const logger = winston.createLogger({
 
 module.exports.mysql = connection;
 module.exports.redis = redis;
+module.exports.pub = pub;
+module.exports.sub = sub;
 module.exports.mongo = mongo;
 module.exports.testMongo = testMongo;
 module.exports.rabbitMQ = rabbitMQ;

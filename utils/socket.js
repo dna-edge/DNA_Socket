@@ -5,6 +5,8 @@
 ******************************************************************************/
 
 const redis = global.utils.redis;
+const pub = global.utils.pub;
+const sub = global.utils.sub;
 const rabbitMQ = global.utils.rabbitMQ;
 const logger = global.utils.logger;
 
@@ -20,6 +22,23 @@ exports.init = (http) => {
   const io = require('socket.io')(http, 
     {'pingInterval': config.ping_interval, 'pingTimeout': config.ping_timeout});
   
+  // 서버간 pub/sub을 위해 socket 구독
+  sub.subscribe('socket');
+
+  // data = { socketId, event, response }
+  sub.on('message', (channel, data) => {
+    const parsed = JSON.parse(data);
+
+    if (channel === 'socket') {
+      // 여기에 들어왔다는 것은, 메시지가 도착했는데 소켓이 그 서버에는 없었다는 뜻입니다.
+      // 동시에 다른 서버에도 pub을 했을 테니까... 
+      // 여기서도 똑같이 있으면 처리하고, 대신 없으면 다시 pub 해줄 필요없이 무시합니다.
+      if (Object.keys(io.sockets.sockets).includes(parsed.socketId)) {
+        io.sockets.to(parsed.socketId).emit(parsed.event, parsed.response);
+      }      
+    }
+  });
+
   io.on('connection', (socket) => {
     /*******************
      * 소켓 에러 로그
@@ -37,8 +56,6 @@ exports.init = (http) => {
     ********************/
     // 클라에서 보내온 정보를 레디스에 저장합니다.
     socket.on('store', (data) => {
-      console.log(io.sockets);
-      console.log(data)
       session.storeAll(socket.id, data);
     });
 
@@ -154,7 +171,7 @@ exports.init = (http) => {
         }
 
         const position = response.result.position.coordinates;
-        session.findUserInBound(socket, response, "new_msg") ;
+        session.findUserInBound(io, socket, response, "new_msg") ;
 
         // 4. 해당 메시지가 확성기 타입일 경우에는 푸시 메시지도 보내줘야 합니다.
         if (messageData.type === "LoudSpeaker") {
@@ -207,7 +224,7 @@ exports.init = (http) => {
           console.log(err);
           return;
         }
-        session.findUserInBound(socket, response, "apply_like");
+        session.findUserInBound(io, socket, response, "apply_like");
       }      
     });
 
@@ -229,15 +246,48 @@ exports.init = (http) => {
       } finally {
         // 3. 결과물을 해당 유저와 나에게 쏴야 합니다.
         // redis의 세션 목록에 해당 유저가 있는지 확인하고, 있으면 쏩니다.
-        redis.hgetall('info', (err, object) => {
-          if (err) console.log(err);
-          const receiver = response.result.receiver;
-          if (object[receiver]) { // 해당 유저가 현재 접속중일 경우에만 보내고,
-            socket.broadcast.to(JSON.parse(object[receiver]).socket).emit('new_dm', response);
+        const receiver = response.result.receiver;
+        redis.hmget("info", receiver, (err, object) => {
+          if (err) {
+            console.log(err);
+            return;
+          } else {
+            if (object && object.length > 0) {
+              const socketId = object[0];
+
+              if (Object.keys(io.sockets.sockets).includes(socketId)){ // 존재할 경우 직접 보냅니다.
+                socket.broadcast.to(socketId).emit('new_dm', response);
+              } else {
+                const data = {
+                  socketId,
+                  event: "new_dm",
+                  response
+                };
+                pub.publish('socket', JSON.stringify(data));
+              }
+            }
           }
-          // 내 자신에게도 발송해줍니다!
-          socket.emit('new_dm', response);
         });
+        socket.emit('new_dm', response);
+        // redis.hgetall('info', (err, object) => {
+        //   if (err) console.log(err);
+          
+        //   if (object[receiver]) { // 해당 유저가 현재 접속중일 경우에만 보내고,
+        //     const socketId = JSON.parse(object[receiver]).socket;
+        //     if (Object.keys(io.sockets.sockets).includes(key)){ // 존재할 경우 직접 보냅니다.
+        //       socket.broadcast.to(socketId).emit('new_dm', response);
+        //     } else {
+        //       const data = {
+        //         socketId,
+        //         event: "new_dm",
+        //         response
+        //       };
+        //       pub.publish('socket', JSON.stringify(data));
+        //     }
+        //   }
+        //   // 내 자신에게도 발송해줍니다!
+        //   socket.emit('new_dm', response);
+        // });
       }      
     });
   });

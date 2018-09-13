@@ -5,8 +5,8 @@
 ******************************************************************************/
 
 const redis = global.utils.redis;
+const pub = global.utils.pub;
 const geolib = require('geolib');
-const async = require('async');
 const helpers = require('./helpers');
 /* 
   레디스에 전달 받은 유저 정보를 저장하는 함수입니다.
@@ -35,6 +35,8 @@ exports.storeAll = (socketId, data) => {
     storeHashMap("client", mapKey, socketId, idx);
     storeHashMap("info", mapKey, idx, JSON.stringify(info));
 
+    // DM을 위해서 mapKey를 붙이지 않은 유저 정보도 가지고 있어야 합니다.
+    redis.hmset("info", idx, socketId);
     redis.geoadd(mapKey + "geo", position[0], position[1], idx);
     redis.hmset("tilemap", socketId, mapKey);
   }      
@@ -54,11 +56,12 @@ const storeHashMap = (type, mapKey, key, value) => {
 
 /* 
   해당 메시지의 좌표 값을 통해 해당 메시지를 받아볼 유저들을 추려내는 함수입니다.
+  @param io       : pub/sub을 위한 io 객체
   @param socket   : 연결한 소켓 자체
   @param response : 메시지의 내용
   @param event    : 클라이언트로 emit할 이벤트 이름
 */
-exports.findUserInBound = (socket, response, event) => {
+exports.findUserInBound = (io, socket, response, event) => {
   return new Promise(async (resolve, reject) => {
     // 먼저 현재 위치를 기반으로 client 리스트를 뽑아옵니다.
     const position = response.result.position.coordinates;
@@ -97,8 +100,19 @@ exports.findUserInBound = (socket, response, event) => {
                 { latitude: messageLat, longitude: messageLng }                // 메시지 발생 위치
               );
               if (value.radius >= distance) { 
-                // 거리 값이 설정한 반경보다 작을 경우에만 이벤트를 보내줍니다.            
-                socket.broadcast.to(key).emit(event, next.response);
+                // 거리 값이 설정한 반경보다 작을 경우에만 이벤트를 보내줍니다.    
+                // 보내주기 전에, 해당 socket이 현재 이 서버에 존재하는지 확인합니다.
+                // 없다면 redis의 pub/sub을 이용해 다른 서버에 뿌려줘야 합니다.
+                if (Object.keys(io.sockets.sockets).includes(key)){ // 존재할 경우 직접 보냅니다.
+                  socket.broadcast.to(key).emit(event, next.response) 
+                } else {
+                  const data = {
+                    socketId: key,
+                    event,
+                    response: next.response
+                  };
+                  pub.publish('socket', JSON.stringify(data));
+                }
               }
             }
           }
