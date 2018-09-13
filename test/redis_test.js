@@ -28,7 +28,6 @@ const helpers = require('./../utils/helpers');
 const minInbountLng = (Math.floor(currentLng * 10)) * 0.1;
 const minInbountLat = (Math.floor(currentLat * 10)) * 0.1;
 
-// 편하게 콜백 처리를 하기 위해 async를 사용했습니다.
 async.waterfall([
   // 먼저 레디스를 초기화합니다.
   function init(next) {

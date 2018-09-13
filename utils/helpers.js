@@ -41,18 +41,6 @@ exports.getClientId = (customId) => {
   return result;
 }
 
-exports.returnAuth = (token) => {
-  return new Promise((resolve, reject) => {
-    authModel.auth(token, (err, userData) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(userData);
-      }
-    });
-  });
-}
-
 exports.getCurrentDate = () => {
   var date = new Date();
  
@@ -67,6 +55,11 @@ exports.getCurrentDate = () => {
   return new Date(Date.UTC(year, month, today, hours, minutes, seconds, milliseconds));
 }
 
+/*******************
+ *  randomGeoLocation
+ *  @param : minLng, minLat
+ *  @return: [lng, lat]
+ ********************/
 exports.randomGeoLocation = (minLng, minLat) => {
   let lng, lat;
 
@@ -85,6 +78,11 @@ exports.randomNumber = (min, max) => {
   return Math.floor(Math.random() * max) + min;
 };
 
+/*******************
+ *  getMapKey
+ *  @param : mainLength, maxLength
+ *  @return: String
+ ********************/
 exports.randomString = (minLength, maxLength) => {
   const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   let length;
@@ -99,3 +97,12 @@ exports.randomString = (minLength, maxLength) => {
 
   return text;
 };
+
+/*******************
+ *  getMapKey
+ *  @param : position = [lng, lat]
+ *  @return: String ex "-1271-375"
+ ********************/
+exports.getMapkey = (position) => {
+  return "-" + Math.floor(position[0] * 10) + "-" + Math.floor(position[1] * 10);
+}

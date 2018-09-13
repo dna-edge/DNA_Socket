@@ -29,7 +29,7 @@ function reconnect(connection){
   console.log("[ MYSQL ] New connection tentative ...");
 
   if (connection) connection.destroy(); // 현재 커넥션이 존재한다면 끊고 새로 만든다.
-  const connection = mysql.createConnection(dbConfig);
+  connection = mysql.createConnection(dbConfig);
 
   connection.connect(function(err){
       if (err) setTimeout(reconnect, 2000); // 2초마다 연결을 요청한다.
@@ -148,7 +148,6 @@ rabbitMQ.connect('amqp://localhost', function(err, conn) {
 
     const ex = 'push';
     ch.assertExchange(ex, 'direct', {durable: false});
-      // direct 타입이 아니라 topic 타입으로 exchange를 생성한다.
   });
 });
 

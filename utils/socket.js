@@ -11,19 +11,19 @@ const helpers = require('./helpers');
 const errorCode = require('./error').code;
 const config = require('./config');
 
-const storeClient = (key, value) => {
-  redis.hmset('clients',              // redis Key
+const storeClient = (key, value, mapKey) => {
+  redis.hmset(mapKey,                 // redis Key
   key,                                // redis Value / hashmap Key    (socket id)
   value);                             // redis Value / hashmap Value  (client info)
 };
 
-const storeInfo = (idx, info) => {
-  redis.hmset('info',
+const storeInfo = (idx, info, mapKey) => {
+  redis.hmset(mapKey,
   idx, 
   info);
 }
 
-const storeGeoInfo = (idx, position) => {
+const storeGeoInfo = (idx, position, mapKey) => {
   geo.addLocation(idx, 
     { latitude: position[1], longitude: position[0] });
 };
@@ -44,19 +44,21 @@ const storeGeoInfo = (idx, position) => {
 */
 exports.storeAll = (id, data) => {
   const idx = data.idx;
+  const position = data.position;  
+  const mapKey = helpers.getMapkey(position);
   
   const info = {
     socket: id,
-    position: data.position,
+    position: position,
     radius: data.radius,
     nickname: data.nickname,
     avatar: data.avatar,
   };
 
   if(idx && idx !== undefined){
-    storeClient(id, idx);
-    storeInfo(idx, JSON.stringify(info));
-    storeGeoInfo(idx, data.position);
+    storeClient(id, idx, "client"+mapKey);
+    storeInfo(idx, JSON.stringify(info), "info"+mapKey);
+    storeGeoInfo(idx, data.position, mapKey);
   }      
 }
 
@@ -67,7 +69,10 @@ exports.storeAll = (id, data) => {
   @param event    : 클라이언트로 emit할 이벤트 이름
 */
 const findUserInBound = (socket, response, event) => {
-  redis.hgetall('clients', (err, object) => {
+  const position = response.result.position.coordinates;
+  const mapKey = helpers.getMapkey(position);
+  
+  redis.hgetall("client" + mapKey, (err, object) => {
     if (err) logger.log("error", "Error: websocket error", error);
     if (!object || object === null) return;
 
@@ -76,7 +81,8 @@ const findUserInBound = (socket, response, event) => {
     
     Object.keys(object).forEach(function (key) {
       const idx = object[key];
-      redis.hmget("info", idx, (err, result) => {
+      
+      redis.hmget("info" + mapKey, idx, (err, result) => {
         // 먼저 해당 유저의 정보를 info 키 내부에 있는 값으로 가져옵니다.
         if (err) logger.log("error", "Error: websocket error", error);
 
@@ -139,8 +145,9 @@ exports.init = (http) => {
     });
 
     // 클라가 주기적으로 현재 위치를 업데이트하면 이를 레디스에서 갱신합니다.
-    socket.on('update', async (type, data) => {      
+    socket.on('update', async (type, data) => {    
       this.storeAll(socket.id, data);
+      const position = data.position;
 
       // 해당 위치와 radius에 맞는 접속자와 접속중인 친구들을 찾아 보내줍니다.
       // 유저에게 type을 받아서, 이에 맞는 정보를 찾아서 보내주면 됩니다.
@@ -148,7 +155,6 @@ exports.init = (http) => {
       //    dm  : 접속 중인 친구 리스트 return
 
       if (type === "geo") {
-        const position = data.position;
         await new Promise((resolve, reject) => {
           // nearby @param : {위도, 경도}, 반경
           // 현재 유저의 위치로부터 유저가 설정한 반경값 이내에 존재하는 접속자만 추려냅니다.
@@ -168,7 +174,10 @@ exports.init = (http) => {
             let infoList = [];
 
             positions.map(async (idx, i) => {
-              redis.hmget('info', idx, (err, info) => {
+              // redis의 모든 값들을 가져오지 말고, 
+              // 현재 유저가 존재하는 위치 내 타일에 있는 유저들만 끌고 오면 된다!
+              const mapKey = "info" + helpers.getMapkey(position);
+              redis.hmget(mapKey, idx, (err, info) => {
                 if (err) {
                   logger.log("error", "Error: websocket error", error);
                   reject(err);
@@ -229,44 +238,49 @@ exports.init = (http) => {
       } catch (err) {
         logger.log("error", "Error: websocket error", error);
         response = errorCode[err];
-      }
+      } finally {
+        if (!response || response === null) {        
+          logger.log("error", "Error: websocket error", error);
+          return;
+        }
 
-      const messageLat = response.result.position.coordinates[1];
-      const messageLng = response.result.position.coordinates[0];
+        const messageLat = response.result.position.coordinates[1];
+        const messageLng = response.result.position.coordinates[0];
 
-      findUserInBound(socket, response, "new_msg") ;
+        findUserInBound(socket, response, "new_msg") ;
 
-      // 4. 해당 메시지가 확성기 타입일 경우에는 푸시 메시지도 보내줘야 합니다.
-      if (messageData.type === "LoudSpeaker") {
-        rabbitMQ.channel.publish("push", "speaker", new Buffer(JSON.stringify(response)));
-        // 5. 푸시 메시지를 보내줄 대상을 선별해줘야 합니다.        
-        await new Promise((resolve, reject) => {
-          // nearby @param : {위도, 경도}, 반경
-          // 작성된 메시지로의 좌표값으로부터 주어진 반경 이내에 위치한 사용자만 추려냅니다.
-          geo.nearby({latitude: messageLat, longitude: messageLng}, radius, 
-            (err, positions) => {
-              if (err) {
-                logger.log("error", "Error: websocket error", error);
-                reject(err);
-              } else {
-                resolve(positions);
-              }
-            });
-        })
-        .then((positions) => {
-          positions.map(async (idx, i) => {
-            redis.hmget('info', idx, (err, info) => {
-              if (err) {
-                console.log(err);
-                logger.log("error", "Error: websocket error", error);
-              }
-              else {
-                const json = JSON.parse(info[0]);
-                socket.to(json.socket).emit("speaker", response.result);
-              }
+        // 4. 해당 메시지가 확성기 타입일 경우에는 푸시 메시지도 보내줘야 합니다.
+        if (messageData.type === "LoudSpeaker") {
+          rabbitMQ.channel.publish("push", "speaker", new Buffer(JSON.stringify(response)));
+          // 5. 푸시 메시지를 보내줄 대상을 선별해줘야 합니다.        
+          await new Promise((resolve, reject) => {
+            // nearby @param : {위도, 경도}, 반경
+            // 작성된 메시지로의 좌표값으로부터 주어진 반경 이내에 위치한 사용자만 추려냅니다.
+            geo.nearby({latitude: messageLat, longitude: messageLng}, radius, 
+              (err, positions) => {
+                if (err) {
+                  logger.log("error", "Error: websocket error", error);
+                  reject(err);
+                } else {
+                  resolve(positions);
+                }
+              });
+          })
+          .then((positions) => {
+            positions.map(async (idx, i) => {
+              redis.hmget('info', idx, (err, info) => {
+                if (err) {
+                  console.log(err);
+                  logger.log("error", "Error: websocket error", error);
+                }
+                else {
+                  const json = JSON.parse(info[0]);
+                  socket.to(json.socket).emit("speaker", response.result);
+                }
+              });
             });
           });
-        });
+        }
       }
     });
 
@@ -286,6 +300,10 @@ exports.init = (http) => {
       } finally {
         // 3. 결과물을 이 메시지를 받아보는 유저와 나에게 쏴야 합니다.
         // 기존 메시지 수신 방식이랑 동일하게 하면 됩니다.
+        if (!response || response === null) {        
+          logger.log("error", "Error: websocket error", error);
+          return;
+        }
         findUserInBound(socket, response, "apply_like");
       }      
     });
