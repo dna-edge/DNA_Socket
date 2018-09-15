@@ -180,7 +180,6 @@ exports.init = (http) => {
           await new Promise(async (resolve, reject) => {
             // nearby @param : {위도, 경도}, 반경
             // 작성된 메시지로의 좌표값으로부터 주어진 반경 이내에 위치한 사용자만 추려냅니다.
-            const mapKey = helpers.getMapkey(position) + "geo";
             const positions = await session.returnSessionList("geo", position, radius);
             positions.length > 0 ? resolve(positions) : reject();
           })
@@ -268,52 +267,8 @@ exports.init = (http) => {
             }
           }
         });
-        socket.emit('new_dm', response);
-        // redis.hgetall('info', (err, object) => {
-        //   if (err) console.log(err);
-          
-        //   if (object[receiver]) { // 해당 유저가 현재 접속중일 경우에만 보내고,
-        //     const socketId = JSON.parse(object[receiver]).socket;
-        //     if (Object.keys(io.sockets.sockets).includes(key)){ // 존재할 경우 직접 보냅니다.
-        //       socket.broadcast.to(socketId).emit('new_dm', response);
-        //     } else {
-        //       const data = {
-        //         socketId,
-        //         event: "new_dm",
-        //         response
-        //       };
-        //       pub.publish('socket', JSON.stringify(data));
-        //     }
-        //   }
-        //   // 내 자신에게도 발송해줍니다!
-        //   socket.emit('new_dm', response);
-        // });
+        socket.emit('new_dm', response);       
       }      
     });
   });
 };
-
-
-// socket.conn.on('packet', function (packet) {
-//   if (packet.type === 'ping') {console.log('received ping');}
-// });
-// socket.conn.on('packetCreate', function (packet) {
-//   if (packet.type === 'pong') console.log('sending pong');
-// });
-
-
-// Working with W3C Geolocation API
-// navigator.geolocation.getCurrentPosition(
-//   function(position) {
-//       alert('You are ' + geolib.getDistance(position.coords, {
-//           latitude: 51.525,
-//           longitude: 7.4575
-//       }) + ' meters away from 51.525, 7.4575');
-//   },
-//   function() {
-//       alert('Position could not be determined.')
-//   },
-//   {
-//       enableHighAccuracy: true
-//   }
-// );
