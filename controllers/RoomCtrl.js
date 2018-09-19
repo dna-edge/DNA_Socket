@@ -15,6 +15,7 @@ let validationError = {
 exports.open = async (req, res, next) => {
   /* PARAM */
   const user1 = req.userData;
+  
   const user2 = {
     idx: req.body.idx || req.params.idx,
     nickname: req.body.nickname || req.params.nickname,
@@ -24,7 +25,7 @@ exports.open = async (req, res, next) => {
   /* 1. 유효성 체크하기 */
   let isValid = true;
 
-  if (!user2.idx || validator.isEmpty(user2.idx)) {
+  if (!user2.idx || user2.idx === null) {
     isValid = false;
     validationError.errors.idx = { message : "User Idx is required" };
   }
@@ -33,6 +34,8 @@ exports.open = async (req, res, next) => {
     isValid = false;
     validationError.errors.nickname = { message : "User Nickname is required" };
   }
+console.log(req.body);
+  console.log(validationError); 
 
   if (!isValid) return res.status(400).json(validationError);
   /* 유효성 체크 끝 */

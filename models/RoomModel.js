@@ -39,6 +39,12 @@ exports.open = (roomData) => {
             nickname: roomData.user2.nickname,
             avatar: roomData.user2.avatar
           }],
+          messages: [
+            { 
+              sender_idx: 0,
+              contents: "채팅방이 개설되었습니다! 이제 DM을 주고 받을 수 있습니다."
+            }
+          ],
           created_at: helpers.getCurrentDate(),
           updated_at: helpers.getCurrentDate()
         }
