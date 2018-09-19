@@ -36,7 +36,7 @@ exports.storeAll = (socketId, data) => {
     storeHashMap("info", mapKey, idx, JSON.stringify(info));
 
     // DM을 위해서 mapKey를 붙이지 않은 유저 정보도 가지고 있어야 합니다.
-    redis.hmset("info", idx, socketId);
+    redis.hmset("info", idx, JSON.stringify(info));
     redis.geoadd(mapKey + "geo", position[0], position[1], idx);
     redis.hmset("tilemap", socketId, mapKey);
   }      
@@ -215,6 +215,7 @@ exports.removeSession = async (socketID) => {
           if (idx && idx !== null) {
             redis.zrem(mapKey + "geo", idx);
             redis.hdel(mapKey + "info", idx);
+            redis.hdel("info", idx);
           }
         }
         redis.hdel(mapKey + "client", socketID);

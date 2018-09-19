@@ -10,13 +10,14 @@ const sub = global.utils.sub;
 const rabbitMQ = global.utils.rabbitMQ;
 const logger = global.utils.logger;
 
+const geolib = require('geolib');
+const fetch = require('node-fetch');
 const messageCtrl = require('../controllers/MessageCtrl');
 const dmCtrl = require('../controllers/DMCtrl');
 const helpers = require('./helpers');
 const errorCode = require('./error').code;
 const config = require('./config');
 const session = require('./session');
-const geolib = require('geolib');
 
 exports.init = (http) => {
   const io = require('socket.io')(http, 
@@ -138,9 +139,51 @@ exports.init = (http) => {
             });
           });
         });     
-      } else if (type === "dm"){
-      // 친구 리스트를 받아와서 접속 중인 사람 중에서 추려서 돌려주면 됩니다.
+      } else if (type === "direct"){
+        // 친구 리스트를 받아와서 접속 중인 사람 중에서 추려서 돌려주면 됩니다.)
+        let infoList = [];
+        infoList.push({
+          idx: data.idx
+        });
 
+        fetch(process.env.wasServer + "/friends/show", {
+          method: "POST",
+          headers: {"token": data.token, 'Content-Type': 'application/json' },
+          withCredentials: true,
+          mode: 'no-cors'
+        })
+        .then(res => res.json())
+        .then((response) => {
+          if (response && (response.status === 201 || response.status === 200)) {
+            response.result.map((row, i) => {
+              const friendIdx = (row.user1_idx === data.idx ? row.user2_idx : row.user1_idx);
+              redis.hmget("info", friendIdx, (err, info) => {
+                if (err) console.log(err);
+                if (info && info.length > 0) {
+                  const json = JSON.parse(info[0]);
+
+                  if (json) {
+                    const result = {
+                      idx: friendIdx,
+                      nickname: json.nickname,
+                      avatar: json.avatar,
+                      inside: true
+                    };
+
+                    infoList.push(result);                    
+                  }
+                }
+
+                if (i+1 === response.result.length) {
+                  socket.emit("direct", infoList);
+                }
+              })
+            })
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+        });
       }
     });
 

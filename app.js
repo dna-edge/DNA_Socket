@@ -25,6 +25,7 @@ require('./routes')(app);
 let server, corsOptions;
 switch(process.env.NODE_ENV){
   case 'development':    
+    process.env.wasServer = "http://localhost:9012/api";
     corsOptions = {
       origin: 'http://localhost:9010',
       credentials : true
@@ -34,6 +35,7 @@ switch(process.env.NODE_ENV){
     break;
 
   case 'production':
+    process.env.wasServer = "https://dna.soyoungpark.me:9012/api"
     corsOptions = {
       origin: 'https://dna.soyoungpark.me',
       credentials : true
