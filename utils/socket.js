@@ -146,7 +146,7 @@ exports.init = (http) => {
           idx: data.idx
         });
 
-        fetch(process.env.wasServer + "/friends/show", {
+        fetch(process.env.WAS_SERVER + "/friends/show", {
           method: "POST",
           headers: {"token": data.token, 'Content-Type': 'application/json' },
           withCredentials: true,

@@ -24,8 +24,7 @@ require('./routes')(app);
 // 크로스 도메인 문제를 해결하고 production 모드의 경우 https를 적용합니다.
 let server, corsOptions;
 switch(process.env.NODE_ENV){
-  case 'development':    
-    process.env.wasServer = "http://localhost:9012/api";
+  case 'development':        
     corsOptions = {
       origin: 'http://localhost:9010',
       credentials : true
@@ -35,7 +34,6 @@ switch(process.env.NODE_ENV){
     break;
 
   case 'production':
-    process.env.wasServer = "https://dna.soyoungpark.me:9012/api"
     corsOptions = {
       origin: 'https://dna.soyoungpark.me',
       credentials : true
