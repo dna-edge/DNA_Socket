@@ -62,6 +62,10 @@ exports.save = (token, param) => {
 
       let response = '';
 
+      const messageData = {
+        idx, id, nickname, avatar, lng, lat, type, contents, testing
+      };   
+
       if (!testing && type === "LoudSpeaker") { 
         // 확성기일 경우 해당 유저의 잔여 point를 조회합니다.
         // 테스트 환경일 경우에는 체크하지 않습니다.
@@ -85,10 +89,7 @@ exports.save = (token, param) => {
                   result: { points }        
                 };
                 reject();
-              } else {
-                const messageData = {
-                  idx, id, nickname, avatar, lng, lat, type, contents, testing
-                };   
+              } else {                
                 resolve(messageData);
               }
             } else {
@@ -99,6 +100,8 @@ exports.save = (token, param) => {
           // TODO 에러 잡았을때 응답메세지, 응답코드 수정할것
           reject(err);
         }        
+      } else {
+        resolve(messageData);
       }
     })
     .then((messageData) => {

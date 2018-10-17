@@ -67,20 +67,8 @@ exports.init = (http) => {
 
     // 클라가 주기적으로 현재 위치를 업데이트하면 이를 레디스에서 갱신합니다.
     socket.on('update', async (type, data) => {    
-      // 먼저 현재 위치를 mapKey로 변환해 위치에 변화가 있는지 확인해야 합니다.
-      const position = data.position;
-      const newMapKey = helpers.getMapkey(position);
-      const currentMapKey = await session.returnMapKey(socket.id);
-
-      if (!currentMapKey || currentMapKey === null) {
-        return;
-      }
-
-      if (newMapKey !== currentMapKey) { // 두 값이 다르다면 기존 값을 먼저 지워줘야 합니다.
-        session.removeSession(socket.id);
-      }
       session.storeAll(socket.id, data);
-      
+      const position = data.position;
 
       // 해당 위치와 radius에 맞는 접속자와 접속중인 친구들을 찾아 보내줍니다.
       // 유저에게 type을 받아서, 이에 맞는 정보를 찾아서 보내주면 됩니다.
@@ -100,10 +88,7 @@ exports.init = (http) => {
             let infoList = [];
 
             positions.map(async (idx, i) => {
-              // redis의 모든 값들을 가져오지 말고, 
-              // 현재 유저가 존재하는 위치 내 타일에 있는 유저들만 끌고 오면 된다!
-              const mapKey = helpers.getMapkey(position) + "info";
-              redis.hmget(mapKey, idx, (err, info) => {
+              redis.hmget("info", idx, (err, info) => {
                 if (err) {
                   logger.log("error", "Error: websocket error", err);
                   console.log(err);
@@ -199,9 +184,9 @@ exports.init = (http) => {
       let response = '';  
       const token = data.token;
       const messageData = data.messageData;
-      messageData.testing = data.testing;
+            messageData.testing = data.testing;
       const radius = data.radius;
-
+      
       try {
         response = await messageCtrl.save(token, messageData);
       } catch (err) {
@@ -212,7 +197,7 @@ exports.init = (http) => {
         if (!response || response === null) {        
           return;
         }
-
+        
         const position = response.result.position.coordinates;
         session.findUserInBound(io, socket, response, "new_msg") ;
 
@@ -227,9 +212,8 @@ exports.init = (http) => {
             positions.length > 0 ? resolve(positions) : reject();
           })
           .then((positions) => {
-            const mapKey = helpers.getMapkey(position) + "info";
             positions.map(async (idx, i) => {
-              redis.hmget(mapKey, idx, (err, info) => {
+              redis.hmget("info", idx, (err, info) => {
                 if (err) {
                   logger.log("error", "Error: websocket error", err);
                   console.log(err);
