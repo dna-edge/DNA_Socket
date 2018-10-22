@@ -101,6 +101,38 @@ exports.close = (userIdx, roomIdx) => {
 };
 
 
+/*******************
+ *  toogleAble
+ *  @param: roomIdx
+ ********************/
+exports.toogleAble = (roomIdx) => {
+  return new Promise((resolve, reject) => {
+    // 1. 먼저 활성화 유무를 체크한다.
+    mongo.roomModel.selectOne(roomIdx, (err, room) => {
+      if (err) {
+        const customErr = new Error("Error occrred Check is enabled: " + err);
+        reject(customErr);  
+      } else {
+        const result = room[0].enable;
+        resolve(result);
+      }      
+    });
+  })
+  .then((enable) => {
+    return new Promise((resolve, reject) => { 
+      let setEnable = !enable;
+      mongo.roomModel.toogleAble(roomIdx, setEnable, (err, result) => {
+          if (err) {
+            const customErr = new Error("Error occrred while toogleAble Room's DMs: " + err);
+            reject(customErr);        
+          } else {
+            resolve(result);
+          }
+      });
+    });
+  });
+};
+
 
 /*******************
  *  CheckUser
