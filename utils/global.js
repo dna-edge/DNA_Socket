@@ -23,7 +23,7 @@ redis.flushdb(() => {
 const mongoose = require('mongoose');
 
 const url = `mongodb://${process.env.EC2_HOST}:${process.env.MONGO_PORT}/${process.env.DB_NAME}`;
-const testUrl = `mongodb://${process.env.EC2_HOST}:${process.env.MONGO_PORT}/test`;
+const testUrl = `mongodb://${process.env.EC2_HOST}:${process.env.MONGO_PORT}/DNA_stress`;
 
 const options = {
   user: process.env.MONGO_USERNAME,
