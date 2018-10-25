@@ -91,12 +91,14 @@ const rabbitMQ = require('amqplib/callback_api');
 rabbitMQ.channel = '';
 
 rabbitMQ.connect('amqp://localhost', function(err, conn) {
-  conn.createChannel(function(err, ch) {
-    rabbitMQ.channel = ch;
+  if (conn) {
+    conn.createChannel(function(err, ch) {
+      rabbitMQ.channel = ch;
 
-    const ex = 'push';
-    ch.assertExchange(ex, 'direct', {durable: false});
-  });
+      const ex = 'push';
+      ch.assertExchange(ex, 'direct', {durable: false});
+    });
+  }
 });
 
 /* winston */
