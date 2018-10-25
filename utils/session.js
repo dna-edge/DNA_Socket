@@ -173,24 +173,18 @@ exports.returnMapKey = (socketID) => {
   @param socketID : 삭제할 유저의 소켓 ID
 */
 exports.removeSession = async (socketID) => {
-  const mapKey = await this.returnMapKey(socketID);
-  redis.hdel("tilemap", socketID);
-
-  if (mapKey && mapKey !== null) {
-    redis.hmget(mapKey + "client", socketID, (err, result) => {
-      if (err) {
-        console.log(err);                
-      } else {
-        if (result && result.length > 0) {
-          const idx = result[0];
-          if (idx && idx !== null) {
-            redis.zrem(mapKey + "geo", idx);
-            redis.hdel(mapKey + "info", idx);
-            redis.hdel("info", idx);
-          }
+  redis.hmget("client", socketID, (err, result) => {
+    if (err) {
+      console.log(err);                
+    } else {
+      if (result && result.length > 0) {
+        const idx = result[0];
+        if (idx && idx !== null) {
+          redis.zrem("geo", idx);
+          redis.hdel("info", idx);
         }
-        redis.hdel(mapKey + "client", socketID);
       }
-    });
-  }      
+      redis.hdel("client", socketID);
+    }
+  });
 }
