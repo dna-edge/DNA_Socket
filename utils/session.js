@@ -59,7 +59,7 @@ const storeHashMap = (type, key, value) => {
 */
 exports.findUserInBound = (io, socket, response, event) => {
   return new Promise(async (resolve, reject) => {
-    // 먼저 현재 위치를 기반으로 client 리스트를 뽑아옵니
+    // 먼저 현재 위치를 기반으로 client 리스트를 뽑아옵니다.
     const clientList = await this.returnSessionList("client");
     
     if (clientList) {

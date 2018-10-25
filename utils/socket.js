@@ -57,6 +57,9 @@ exports.init = (http) => {
     ********************/
     // 클라에서 보내온 정보를 레디스에 저장합니다.
     socket.on('store', (data) => {
+      if (Object.prototype.toString.call(data) == "[object String]") {
+        data = JSON.parse(data);
+      }
       session.storeAll(socket.id, data);
     });
 
@@ -67,6 +70,9 @@ exports.init = (http) => {
 
     // 클라가 주기적으로 현재 위치를 업데이트하면 이를 레디스에서 갱신합니다.
     socket.on('update', async (type, data) => {    
+      if (Object.prototype.toString.call(data) == "[object String]") {
+        data = JSON.parse(data);
+      }
       session.storeAll(socket.id, data);
       const position = data.position;
 
@@ -180,6 +186,10 @@ exports.init = (http) => {
 
     // 새로 메시지를 생성했을 경우에는
     socket.on('save_msg', async (data) => {
+      if (Object.prototype.toString.call(data) == "[object String]") {
+        data = JSON.parse(data);
+      }
+
       // 1. DB에 저장하기 위해 컨트롤러를 호출합니다.
       let response = '';  
       const token = data.token;
@@ -260,6 +270,10 @@ exports.init = (http) => {
     ********************/
 
     socket.on('save_dm', async (token, messageData) => {
+      if (Object.prototype.toString.call(messageData) == "[object String]") {
+        messageData = JSON.parse(messageData);
+      }
+
       // 1. DB에 저장하기 위해 컨트롤러를 호출한다.
       let response = '';
 
