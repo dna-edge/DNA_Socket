@@ -41,6 +41,7 @@ exports.init = (http) => {
   });
 
   io.on('connection', (socket) => {
+    console.log("user connected");
     /*******************
      * 소켓 에러 로그
     ********************/
