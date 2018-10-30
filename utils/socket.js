@@ -138,7 +138,7 @@ exports.init = (http) => {
         });
 
         fetch(process.env.WAS_SERVER + "/friends/show", {
-          method: "POST",
+          method: "GET",
           headers: {"token": data.token, 'Content-Type': 'application/json' },
           withCredentials: true,
           mode: 'no-cors'
@@ -256,7 +256,7 @@ exports.init = (http) => {
       } finally {
         // 3. 결과물을 이 메시지를 받아보는 유저와 나에게 쏴야 합니다.
         // 기존 메시지 수신 방식이랑 동일하게 하면 됩니다.
-        if (!response || response === null) {        
+        if (!response || response === null) {                  
           console.log(err);
           return;
         }
