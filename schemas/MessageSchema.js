@@ -58,10 +58,10 @@ Schema.createSchema = (mongoose) => {
   messageSchema.static('selectAll', function(blocks, page, callback) {
     if (!page) { // 페이지 인자가 없음 : 페이지네이션이 되지 않은 경우
       return this.find({ 'user.idx': { $nin: blocks }}, callback)
-        .sort('created_at');
+        .sort('-idx');
     } else {     // 페이지 인자가 있음 : 페이지네이션 적용
       return this.find({ 'user.idx': { $nin: blocks }}, callback)
-        .sort('created_at')
+        .sort('-idx')
         .skip((page-1) * paginationCount).limit(paginationCount);
     }
   });
@@ -78,7 +78,7 @@ Schema.createSchema = (mongoose) => {
             radius : parseFloat(conditions.radius/6371000), // change radian: 1/6371 -> 1km
             unique : true, spherical : true
           }
-        ).sort('-created_at');
+        ).sort('-idx');
     } else {     // 페이지 인자가 있음 : 페이지네이션 적용
       return this.find({ 'user.idx': { $nin: blocks }}, callback)
         .where('position')
@@ -89,7 +89,7 @@ Schema.createSchema = (mongoose) => {
             unique : true, spherical : true
           }
         )
-        .sort('-created_at')
+        .sort('-idx')
         .skip((page-1) * paginationCount).limit(paginationCount);
     }
   });
@@ -106,7 +106,7 @@ Schema.createSchema = (mongoose) => {
           unique : true, spherical : true
         }
       )
-      .sort('-like_count').sort('-created_at')
+      .sort('-like_count').sort('-idx')
       .limit(3);      
   });
 
