@@ -8,9 +8,8 @@ Schema.createSchema = (mongoose) => {
   const messageSchema = mongoose.Schema({
     idx: { type: Number, index: { unique: true } },
     user: {
-      idx: { type: Number, required: true },
-      nickname: { type: String, required: true },
-      avatar: String},
+      idx: { type: Number, required: true }
+    },
     position: {
       type: { type: String, default: "Point"},
       coordinates: [{ type: Number }]

@@ -116,6 +116,7 @@ exports.init = (http) => {
                       idx,
                       nickname: json.nickname,
                       avatar: json.avatar,
+                      anonymity: json.anonymity,
                       inside
                     };
                     
