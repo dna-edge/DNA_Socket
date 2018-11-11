@@ -44,11 +44,6 @@ Schema.createSchema = (mongoose) => {
     });
   });
 
-  // messageSchema.post('save', function(result) {
-  //   console.log('저장 완료', result);
-  // });
-
-
   // selectOne : 하나 조회하기
   messageSchema.static('selectOne', function(idx, callback) {
     return this.find({ idx: parseInt(idx) }, callback);
