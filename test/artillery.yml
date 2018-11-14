@@ -1,7 +1,9 @@
 # socket.io로 30초 동안 테스트를 진행합니다.
 # 
 config:
-  target: "http://54.175.217.96:9014"     # 테스트가 진행될 주소
+#  target: "http://54.175.217.96:9014"     # 테스트가 진행될 주소
+#  target: "https://dna.soyoungpark.me:9014"
+  target: "http://localhost:9014"
 #  socketio:                           # socket.io로 테스트한다는 뜻
 #    transports: ["websocket"]
   phases:                             # 해당 기간 동안 몇 명의 가상 유저가 생성되는지
