@@ -294,7 +294,7 @@ exports.init = (http) => {
     socket.on('like', async (token, idx) => {
       // 1. DB에 저장하기 위해 컨트롤러를 호출한다.
       let response = '';
-
+      
       try {
         response = await messageCtrl.like(token, idx);
       } catch (err) {
