@@ -133,8 +133,6 @@ exports.returnSessionList = (type, position, radius) => {
           console.log(err);
           reject(err);
         }
-        // resultForGeo = resultForGeo.concat(positions);
-        // resolve(resultForGeo);        
         resolve(positions);  
       });
     } else {                // 타입이 client이거나 info일 경우엔 hash 사용      
